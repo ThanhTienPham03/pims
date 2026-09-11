@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="Definitions_ChotSo" targetNamespace="http://saigonbank.fit/ims/bpmn" exporter="Camunda Modeler" exporterVersion="5.50.1">
+  <bpmn:error id="Error_LoiDoiSoat" name="Lỗi số liệu không cân đối" errorCode="ERR_CLOSING_DATA_MISMATCH" />
+  <bpmn:process id="Process_ChotSoThang" name="Quy Trình Chốt Sổ Cuối Tháng" isExecutable="true" camunda:historyTimeToLive="365">
+    <bpmn:laneSet id="LaneSet_ChotSo">
+      <bpmn:lane id="Lane_KiemSoatVien" name="Kiểm Soát Viên (Controller)">
+        <bpmn:flowNodeRef>Start_ChotSo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KiemSoatVienXacNhan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_HuyChotSo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ChotSoThanhCong</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_HeThong_ChotSo" name="Hệ Thống IMS (Tự động)">
+        <bpmn:flowNodeRef>Task_DoiSoatVaTinhGiaBinhQuan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_KetQuaKiemSoat</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ThucHienKhoaSo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GhiAuditLog_ChotSo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LoiDoiSoat</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_LoiDoiSoat</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_ChotSo" name="1. Yêu cầu chốt sổ tháng">
+      <bpmn:documentation>
+        Khởi tạo kỳ chốt sổ tháng (MM/YYYY).
+      </bpmn:documentation>
+      <bpmn:outgoing>Flow_Start_ToDoiSoat</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_DoiSoatVaTinhGiaBinhQuan" name="2. Đối soát số liệu &#38; Tính giá bình quân tháng" camunda:delegateExpression="${genericTaskDelegate}">
+      <bpmn:documentation>
+        Hệ thống tự động:
+        1. Đối chiếu tổng nhập, tổng xuất và tồn kho Thẻ kho với Bảng kê KKTS.
+        2. Tính đơn giá bình quân cuối kỳ: ROUND(Thành tiền tồn / Số lượng tồn, 0).
+        3. Nếu SL tồn = 0 thì Đơn giá = 0, Thành tiền tồn = 0.
+        4. Chuẩn bị bảng kê tổng hợp sẵn sàng cho Kiểm soát viên thẩm tra.
+      </bpmn:documentation>
+      <bpmn:incoming>Flow_Start_ToDoiSoat</bpmn:incoming>
+      <bpmn:outgoing>Flow_DoiSoat_ToKSV</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_LoiDoiSoat" attachedToRef="Task_DoiSoatVaTinhGiaBinhQuan">
+      <bpmn:documentation>Số liệu phát hiện chênh lệch hoặc có giao dịch bất thường.</bpmn:documentation>
+      <bpmn:outgoing>Flow_LoiDoiSoat_ToEnd</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_DoiSoat" errorRef="Error_LoiDoiSoat" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_KiemSoatVienXacNhan" name="3. Kiểm soát viên thẩm tra &#38; Xác nhận khóa sổ" camunda:candidateGroups="ROLE_CONTROLLER,ROLE_ADMIN">
+      <bpmn:documentation>
+        Theo Mục 11:
+        - Chỉ Kiểm soát viên (ROLE_CONTROLLER) có thẩm quyền xác nhận khóa sổ và mở khóa.
+        - KSV thẩm định bảng kê KKTS, số dư tồn kho, các chứng từ nhập/xuất trong kỳ.
+        - Set biến: duyetChot = true/false.
+      </bpmn:documentation>
+      <bpmn:incoming>Flow_DoiSoat_ToKSV</bpmn:incoming>
+      <bpmn:outgoing>Flow_KSV_ToGW</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_KetQuaKiemSoat" name="KSV duyệt khóa sổ?" default="Flow_HuyChot">
+      <bpmn:incoming>Flow_KSV_ToGW</bpmn:incoming>
+      <bpmn:outgoing>Flow_DuyetKhoaSo</bpmn:outgoing>
+      <bpmn:outgoing>Flow_HuyChot</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ThucHienKhoaSo" name="5. Đóng kỳ kế toán &#38; Khóa dữ liệu tháng" camunda:delegateExpression="${monthlyClosingDelegate}">
+      <bpmn:documentation>
+        Hệ thống thực hiện:
+        - Đánh dấu is_locked = true cho kỳ (year, month).
+        - Ghi nhận locked_by (username của KSV) và locked_at (thời gian hiện tại).
+        - Đóng băng toàn bộ quyền tạo, sửa, xóa các phiếu nhập/xuất thuộc kỳ đã khóa.
+        - Chuyển số dư cuối kỳ sang số dư đầu kỳ tháng tiếp theo.
+      </bpmn:documentation>
+      <bpmn:incoming>Flow_DuyetKhoaSo</bpmn:incoming>
+      <bpmn:outgoing>Flow_KhoaSo_ToAuditLog</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_GhiAuditLog_ChotSo" name="6. Ghi nhận Audit Log" camunda:delegateExpression="${genericTaskDelegate}">
+      <bpmn:documentation>
+        Ghi nhật ký kiểm toán: Kiểm soát viên khóa sổ kỳ MM/YYYY, thời điểm, IP.
+      </bpmn:documentation>
+      <bpmn:incoming>Flow_KhoaSo_ToAuditLog</bpmn:incoming>
+      <bpmn:outgoing>Flow_AuditLog_ToChotOK</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ChotSoThanhCong" name="Hoàn tất khóa sổ tháng">
+      <bpmn:incoming>Flow_AuditLog_ToChotOK</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_HuyChotSo" name="Hủy yêu cầu khóa sổ">
+      <bpmn:incoming>Flow_HuyChot</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_LoiDoiSoat" name="Lỗi: Sai lệch số liệu đối soát">
+      <bpmn:incoming>Flow_LoiDoiSoat_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_ToDoiSoat" sourceRef="Start_ChotSo" targetRef="Task_DoiSoatVaTinhGiaBinhQuan" />
+    <bpmn:sequenceFlow id="Flow_DoiSoat_ToKSV" sourceRef="Task_DoiSoatVaTinhGiaBinhQuan" targetRef="Task_KiemSoatVienXacNhan" />
+    <bpmn:sequenceFlow id="Flow_KSV_ToGW" sourceRef="Task_KiemSoatVienXacNhan" targetRef="GW_KetQuaKiemSoat" />
+    <bpmn:sequenceFlow id="Flow_DuyetKhoaSo" name="Đồng ý khóa" sourceRef="GW_KetQuaKiemSoat" targetRef="Task_ThucHienKhoaSo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${duyetChot == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_HuyChot" name="Từ chối / Hủy" sourceRef="GW_KetQuaKiemSoat" targetRef="End_HuyChotSo" />
+    <bpmn:sequenceFlow id="Flow_KhoaSo_ToAuditLog" sourceRef="Task_ThucHienKhoaSo" targetRef="Task_GhiAuditLog_ChotSo" />
+    <bpmn:sequenceFlow id="Flow_AuditLog_ToChotOK" sourceRef="Task_GhiAuditLog_ChotSo" targetRef="End_ChotSoThanhCong" />
+    <bpmn:sequenceFlow id="Flow_LoiDoiSoat_ToEnd" sourceRef="Boundary_LoiDoiSoat" targetRef="End_LoiDoiSoat" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ChotSo">
+    <bpmndi:BPMNPlane id="BPMNPlane_ChotSo" bpmnElement="Process_ChotSoThang">
+      <bpmndi:BPMNShape id="Lane_HeThong_ChotSo_di" bpmnElement="Lane_HeThong_ChotSo" isHorizontal="true">
+        <dc:Bounds x="160" y="260" width="1130" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_KiemSoatVien_di" bpmnElement="Lane_KiemSoatVien" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1130" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_ChotSo_di" bpmnElement="Start_ChotSo">
+        <dc:Bounds x="222" y="142" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="204" y="185" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DoiSoatVaTinhGiaBinhQuan_di" bpmnElement="Task_DoiSoatVaTinhGiaBinhQuan" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="310" y="320" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KiemSoatVienXacNhan_di" bpmnElement="Task_KiemSoatVienXacNhan" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372">
+        <dc:Bounds x="500" y="120" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_KetQuaKiemSoat_di" bpmnElement="GW_KetQuaKiemSoat" isMarkerVisible="true">
+        <dc:Bounds x="695" y="335" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="682" y="392" width="77" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ThucHienKhoaSo_di" bpmnElement="Task_ThucHienKhoaSo" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="800" y="320" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GhiAuditLog_ChotSo_di" bpmnElement="Task_GhiAuditLog_ChotSo" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1020" y="320" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ChotSoThanhCong_di" bpmnElement="End_ChotSoThanhCong">
+        <dc:Bounds x="1202" y="142" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1178" y="185" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_HuyChotSo_di" bpmnElement="End_HuyChotSo" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="702" y="142" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="676" y="112" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LoiDoiSoat_di" bpmnElement="End_LoiDoiSoat" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="412" y="452" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="393" y="495" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_LoiDoiSoat_di" bpmnElement="Boundary_LoiDoiSoat">
+        <dc:Bounds x="412" y="382" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_ToDoiSoat_di" bpmnElement="Flow_Start_ToDoiSoat">
+        <di:waypoint x="258" y="160" />
+        <di:waypoint x="284" y="160" />
+        <di:waypoint x="284" y="360" />
+        <di:waypoint x="310" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DoiSoat_ToKSV_di" bpmnElement="Flow_DoiSoat_ToKSV">
+        <di:waypoint x="460" y="360" />
+        <di:waypoint x="480" y="360" />
+        <di:waypoint x="480" y="160" />
+        <di:waypoint x="500" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_KSV_ToGW_di" bpmnElement="Flow_KSV_ToGW">
+        <di:waypoint x="650" y="160" />
+        <di:waypoint x="670" y="160" />
+        <di:waypoint x="670" y="360" />
+        <di:waypoint x="695" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DuyetKhoaSo_di" bpmnElement="Flow_DuyetKhoaSo">
+        <di:waypoint x="745" y="360" />
+        <di:waypoint x="800" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="741" y="342" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_HuyChot_di" bpmnElement="Flow_HuyChot">
+        <di:waypoint x="720" y="335" />
+        <di:waypoint x="720" y="178" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="724" y="254" width="67" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_KhoaSo_ToAuditLog_di" bpmnElement="Flow_KhoaSo_ToAuditLog">
+        <di:waypoint x="940" y="360" />
+        <di:waypoint x="1020" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AuditLog_ToChotOK_di" bpmnElement="Flow_AuditLog_ToChotOK">
+        <di:waypoint x="1080" y="320" />
+        <di:waypoint x="1080" y="160" />
+        <di:waypoint x="1202" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LoiDoiSoat_ToEnd_di" bpmnElement="Flow_LoiDoiSoat_ToEnd">
+        <di:waypoint x="430" y="418" />
+        <di:waypoint x="430" y="452" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

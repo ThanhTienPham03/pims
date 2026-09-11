@@ -1,0 +1,50 @@
+# ==============================================================================
+# LƯU Ý (PIMS v2.0 - Camunda 7 Migration):
+# Hệ thống đã chuyển sang Camunda Platform 7 (Embedded Engine chạy trực tiếp
+# trong Spring Boot và lưu vào MariaDB).
+# Các container Zeebe, Operate, Elasticsearch dưới đây KHÔNG CÒN CẦN THIẾT.
+# Bạn có thể chạy `docker compose down` để giải phóng ~3GB RAM cho máy tính.
+# ==============================================================================
+services:
+  zeebe:
+    image: camunda/zeebe:8.6.0
+    container_name: zeebe
+    ports:
+      - "26500:26500"
+      - "26501:26501"
+      - "26502:26502"
+      - "9601:9600"
+    environment:
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.998
+      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.999
+      - "JAVA_TOOL_OPTIONS=-Xms512m -Xmx512m"
+    depends_on:
+      - elasticsearch
+
+  operate:
+    image: camunda/operate:8.6.0
+    container_name: operate
+    ports:
+      - "8081:8080"
+    environment:
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      - "JAVA_TOOL_OPTIONS=-Xms512m -Xmx512m"
+    depends_on:
+      - zeebe
+      - elasticsearch
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"

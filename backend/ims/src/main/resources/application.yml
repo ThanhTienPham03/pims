@@ -1,0 +1,143 @@
+# ==============================================================================
+# SAIGONBANK - Publication Inventory Management System (PIMS)
+# Application Configuration
+# ==============================================================================
+
+spring:
+  application:
+    name: PIMS
+
+  profiles:
+    active: dev
+
+  config:
+    import: optional:file:.env[.properties]
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      pool-name: PIMS-HikariPool
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+
+  # Mail (Gmail SMTP)
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.ssl.trust: "smtp.gmail.com"
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+        default_catalog: ims
+        format_sql: true
+        default_batch_fetch_size: 100
+    open-in-view: false
+
+  # Jackson JSON Serialization
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss
+    time-zone: Asia/Ho_Chi_Minh
+    default-property-inclusion: non_null
+    serialization:
+      fail-on-empty-beans: false
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8085}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# ==============================================================================
+# JWT Security Configuration
+# JWT_SECRET PHẢI được cung cấp qua environment variable.
+# Không có default value để tránh rủi ro bảo mật khi deploy production.
+# Dùng ít nhất 64 ký tự ngẫu nhiên.
+# Ví dụ tạo secret: openssl rand -base64 64
+# ==============================================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:10800000}  # 3 hours default
+
+  mail:
+    from: ${MAIL_FROM:noreply@saigonbank.vn}
+
+# ==============================================================================
+# CORS Configuration
+# Liệt kê các origin được phép. Dùng comma-separated nếu có nhiều origin.
+# ==============================================================================
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+# Camunda 7 Configuration (Embedded Engine & Webapp Cockpit)
+camunda:
+  bpm:
+    enabled: true
+    admin-user:
+      id: admin
+      password: ${CAMUNDA_ADMIN_PASSWORD:Admin@123}
+      first-name: Admin
+      last-name: Saigonbank
+      email: admin@pims.local
+    filter:
+      create: All Tasks
+    webapp:
+      application-path: /camunda
+    database:
+      type: mariadb
+      schema-update: true
+    history-level: full
+    auto-deployment-enabled: true
+    deployment-resource-pattern: classpath*:demo-process.bpmn,classpath*:bpmn/*.bpmn
+    generic-properties:
+      properties:
+        skipIsolationLevelCheck: true
+        enforceHistoryTimeToLive: false
+        historyTimeToLive: P180D
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    saigonbank.fit.ims: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.mariadb.jdbc: WARN    # Đã sửa từ TRACE → WARN (TRACE có thể leak sensitive data)
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# SpringDoc OpenAPI (Swagger UI) Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    display-request-duration: true
+    doc-expansion: none

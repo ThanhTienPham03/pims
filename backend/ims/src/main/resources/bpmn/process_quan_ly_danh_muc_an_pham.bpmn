@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="Definitions_DanhMucAnPham" targetNamespace="http://saigonbank.fit/ims/bpmn" exporter="Camunda Modeler" exporterVersion="5.50.1">
+  <bpmn:error id="Error_TrungMaHang" name="Loi trung ma hang" errorCode="ERR_DUPLICATE_ITEM_CODE" />
+  <bpmn:error id="Error_DuLieuKhongHopLe" name="Loi du lieu danh muc khong hop le" errorCode="ERR_INVALID_CATALOG_DATA" />
+  <bpmn:error id="Error_KhoiTaoThatBai" name="Loi khoi tao the kho KKTS" errorCode="ERR_INIT_STOCK_FAILED" />
+  <bpmn:error id="Error_XoaKhongDuocPhep" name="Loi khong duoc phep xoa ma hang" errorCode="ERR_DELETE_NOT_ALLOWED" />
+  <bpmn:process id="Process_QuanLyDanhMucAnPham" name="Quy Trinh Quan Ly Danh Muc An Pham" isExecutable="true" camunda:historyTimeToLive="365">
+    <bpmn:laneSet id="LaneSet_DanhMuc">
+      <bpmn:lane id="Lane_NguoiDung_DanhMuc" name="Nguoi Quan Tri / Admin">
+        <bpmn:flowNodeRef>Start_DanhMuc</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_LoaiThaoTac</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NhapThongTinMaHang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CanhBaoTenTrung</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_HeThong_DanhMuc" name="He Thong IMS (Tu dong)">
+        <bpmn:flowNodeRef>Task_KiemTraTrungMa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KiemTraTenGanGiong</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_TenTrung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LuuMaHang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KhoiTaoTheKho</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KhoiTaoDongKKTS</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CapNhatThongTinMaHang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KiemTraDuLieuCapNhat</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LuuCapNhat</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GhiAuditLog_DanhMuc</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_ThanhCong</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LoiDuLieu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LoiKhoiTao</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_YeuCauXoaHoacNgung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_KiemTraPhatSinhGiaoDich</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_KhoiTaoThatBai</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_DuLieuKhongHopLe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_TrungMa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LoiTrungMa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ChuyenTrangThaiNgung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_XoaHoanToanMaHang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_XoaKhongDuocPhep</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_DaPhatSinh</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_LoiXoa</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_DanhMuc" name="1. Bat dau: Yeu cau quan ly danh muc an pham">
+      <bpmn:documentation>Admin hoac nguoi quan tri khoi tao quy trinh. Co the la: Tao moi / Cap nhat / Xoa-Ngung su dung ma hang.</bpmn:documentation>
+      <bpmn:outgoing>Flow_Start_ToGateway</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="GW_LoaiThaoTac" name="Loai thao tac?" default="Flow_Default_TaoMoi">
+      <bpmn:documentation>Phan luong theo loai thao tac: Tao moi / Cap nhat / Xoa-Ngung su dung.</bpmn:documentation>
+      <bpmn:incoming>Flow_Start_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Default_TaoMoi</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CapNhat</bpmn:outgoing>
+      <bpmn:outgoing>Flow_XoaHoacNgung</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_NhapThongTinMaHang" name="2. Tiep nhan thong tin khai bao ma hang moi" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>THONG TIN KHAI BAO (Muc 1): Ma hang (bat buoc, duy nhat), Ten hang (bat buoc), Nhom hang: VPP/ACTT/ACQT/VLK (bat buoc), Don vi tinh (bat buoc). Ma khong duoc trung. Ten canh bao neu trung/gan giong.</bpmn:documentation>
+      <bpmn:incoming>Flow_Default_TaoMoi</bpmn:incoming>
+      <bpmn:outgoing>Flow_TaoMoi_ToKiemTraTrung</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_KiemTraTrungMa" name="3. Kiem tra trung ma hang" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Kiem soat du lieu - Khong trung ma hang (Muc 1): Query tat ca ma hang hien co (ke ca Ngung su dung). Neu trung: nem ERR_DUPLICATE_ITEM_CODE. Neu khong trung: tiep tuc.</bpmn:documentation>
+      <bpmn:incoming>Flow_TaoMoi_ToKiemTraTrung</bpmn:incoming>
+      <bpmn:outgoing>Flow_MaOK_ToKiemTraTen</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_TrungMa" attachedToRef="Task_KiemTraTrungMa">
+      <bpmn:documentation>Ma hang bi trung voi ma da ton tai trong he thong.</bpmn:documentation>
+      <bpmn:outgoing>Flow_LoiTrungMa_ToEnd</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_TrungMa" errorRef="Error_TrungMaHang" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_KiemTraTenGanGiong" name="4. Kiem tra ten hang trung / gan giong" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Kiem soat du lieu - Canh bao ten trung/gan giong (Muc 1): So sanh voi tat ca ten hien co (similarity search). Neu giong hoan toan: tenTrungHoanToan=true. Neu gan giong &gt;80%: tenGanGiong=true.</bpmn:documentation>
+      <bpmn:incoming>Flow_MaOK_ToKiemTraTen</bpmn:incoming>
+      <bpmn:outgoing>Flow_KiemTraTen_ToGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_TenTrung" name="Ten trung / gan giong?" default="Flow_TenOK_ToLuu">
+      <bpmn:documentation>Neu ten trung/gan giong: canh bao nguoi dung de xem xet. Neu khong trung: di thang den luu.</bpmn:documentation>
+      <bpmn:incoming>Flow_KiemTraTen_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_TenOK_ToLuu</bpmn:outgoing>
+      <bpmn:outgoing>Flow_TenTrung_ToCanhBao</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_CanhBaoTenTrung" name="5. [Canh bao] Ten trung / gan giong - Xac nhan tiep tuc?" camunda:candidateGroups="ROLE_ADMIN">
+      <bpmn:documentation>He thong hien thi canh bao ten hang co the trung/gan giong. Nguoi dung chon: Tiep tuc luu (chap nhan rui ro) hoac Quay lai chinh sua ten.</bpmn:documentation>
+      <bpmn:incoming>Flow_TenTrung_ToCanhBao</bpmn:incoming>
+      <bpmn:outgoing>Flow_XacNhan_ToLuu</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_LuuMaHang" name="6. Luu ma hang moi vao danh muc" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Luu thong tin ma hang moi: Ma hang, Ten hang, Nhom hang (VPP/ACTT/ACQT/VLK), Don vi tinh. Trang thai mac dinh: Active. Ghi nhan nguoi tao, thoi gian tao. Neu that bai: rollback, nem ERR_INVALID_CATALOG_DATA.</bpmn:documentation>
+      <bpmn:incoming>Flow_TenOK_ToLuu</bpmn:incoming>
+      <bpmn:incoming>Flow_XacNhan_ToLuu</bpmn:incoming>
+      <bpmn:outgoing>Flow_LuuOK_ToKhoiTaoThe</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_DuLieuKhongHopLe" attachedToRef="Task_LuuMaHang">
+      <bpmn:documentation>Du lieu khai bao khong hop le khi luu vao co so du lieu.</bpmn:documentation>
+      <bpmn:outgoing>Flow_LoiDuLieu_ToEnd</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_DuLieu" errorRef="Error_DuLieuKhongHopLe" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_KhoiTaoTheKho" name="7. [Tu dong] Khoi tao the kho rieng cho ma hang moi" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Tu dong khoi tao - Tao the kho (Muc 1): Ma the kho gan voi ma hang. SL ton ban dau = 0. Thanh tien ton = 0. Trang thai: Hoat dong. Neu that bai: rollback toan bo, nem ERR_INIT_STOCK_FAILED.</bpmn:documentation>
+      <bpmn:incoming>Flow_LuuOK_ToKhoiTaoThe</bpmn:incoming>
+      <bpmn:outgoing>Flow_TheKhoOK_ToKhoiTaoKKTS</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_KhoiTaoThatBai" attachedToRef="Task_KhoiTaoTheKho">
+      <bpmn:documentation>Loi khi khoi tao the kho - rollback toan bo.</bpmn:documentation>
+      <bpmn:outgoing>Flow_LoiKhoiTao_ToEnd</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_KhoiTao" errorRef="Error_KhoiTaoThatBai" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_KhoiTaoDongKKTS" name="8. [Tu dong] Khoi tao dong bang ke KKTS voi ton ban dau = 0" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Tu dong khoi tao - Tao dong KKTS (Muc 1): Dong KKTS tuong ung ma hang moi. SL ton=0, Thanh tien=0, Don gia=0, Thang nam: thang hien tai. Neu that bai: rollback ca the kho va KKTS, nem ERR_INIT_STOCK_FAILED.</bpmn:documentation>
+      <bpmn:incoming>Flow_TheKhoOK_ToKhoiTaoKKTS</bpmn:incoming>
+      <bpmn:outgoing>Flow_KKTSOk_ToAuditLog</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_CapNhatThongTinMaHang" name="2b. Tiep nhan cap nhat thong tin ma hang" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Nguoi quan tri chinh sua thong tin ma hang da ton tai: Ten hang, Nhom hang, Don vi tinh. Khong cho phep thay doi Ma hang (khoa truong). Ghi nhan nguoi sua, thoi gian sua.</bpmn:documentation>
+      <bpmn:incoming>Flow_CapNhat</bpmn:incoming>
+      <bpmn:outgoing>Flow_CapNhat_ToKiemTra</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_KiemTraDuLieuCapNhat" name="3b. Kiem tra tinh hop le du lieu cap nhat" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Kiem tra rang buoc cap nhat: Ten hang khong de trong. Nhom hang phai la VPP/ACTT/ACQT/VLK. DVT khong de trong. Neu khong hop le: nem ERR_INVALID_CATALOG_DATA.</bpmn:documentation>
+      <bpmn:incoming>Flow_CapNhat_ToKiemTra</bpmn:incoming>
+      <bpmn:outgoing>Flow_CapNhatOK_ToLuu</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_LuuCapNhat" name="4b. Luu thay doi cap nhat" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Luu thong tin cap nhat vao co so du lieu. Ghi nhan nguoi sua, thoi gian sua. Neu that bai: rollback, nem ERR_INVALID_CATALOG_DATA.</bpmn:documentation>
+      <bpmn:incoming>Flow_CapNhatOK_ToLuu</bpmn:incoming>
+      <bpmn:outgoing>Flow_LuuCapNhat_ToAuditLog</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_YeuCauXoaHoacNgung" name="2c. Tiep nhan yeu cau xoa / Ngung su dung ma hang" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Nguoi quan tri chon ma hang can xoa hoac chuyen Ngung su dung. He thong se kiem tra phat sinh truoc khi cho phep.</bpmn:documentation>
+      <bpmn:incoming>Flow_XoaHoacNgung</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ngung_ToKiemTraPhatSinh</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_KiemTraPhatSinhGiaoDich" name="3c. Kiem tra phat sinh nhap / xuat cua ma hang" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Kiem soat du lieu - Ma da phat sinh khong duoc xoa (Muc 1): Kiem tra lich su phieu nhap/xuat. Neu da co giao dich: daPhatSinh=true. Neu chua: daPhatSinh=false.</bpmn:documentation>
+      <bpmn:incoming>Flow_Ngung_ToKiemTraPhatSinh</bpmn:incoming>
+      <bpmn:outgoing>Flow_PhatSinh_ToGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_DaPhatSinh" name="Ma hang da phat sinh giao dich?" default="Flow_ChuaPhatSinh_XoaHoan">
+      <bpmn:documentation>Da phat sinh: chi chuyen Ngung su dung (khong xoa). Chua phat sinh: cho phep xoa hoan toan.</bpmn:documentation>
+      <bpmn:incoming>Flow_PhatSinh_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_ChuaPhatSinh_XoaHoan</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DaPhatSinh_ChuyenNgung</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ChuyenTrangThaiNgung" name="4c. Chuyen trang thai sang Ngung su dung" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Ma da phat sinh khong duoc xoa (Muc 1): Cap nhat Active -&gt; Ngung su dung (Inactive). Du lieu lich su giu nguyen. Ma Ngung su dung khong hien thi trong dropdown tao phieu moi. Ghi nhan nguoi thao tac, thoi gian.</bpmn:documentation>
+      <bpmn:incoming>Flow_DaPhatSinh_ChuyenNgung</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ngung_ToAuditLog</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_XoaHoanToanMaHang" name="4d. Xoa hoan toan ma hang khoi danh muc" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Chua phat sinh giao dich: cho phep xoa hoan toan khoi CSDL de don sach du lieu.</bpmn:documentation>
+      <bpmn:incoming>Flow_ChuaPhatSinh_XoaHoan</bpmn:incoming>
+      <bpmn:outgoing>Flow_XoaHoanToan_ToAuditLog</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_XoaKhongDuocPhep" attachedToRef="Task_XoaHoanToanMaHang">
+      <bpmn:documentation>Loi khi thu xoa ma hang da phat sinh giao dich nhap/xuat.</bpmn:documentation>
+      <bpmn:outgoing>Flow_LoiXoa_ToEnd</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_XoaKhongDuocPhep" errorRef="Error_XoaKhongDuocPhep" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_GhiAuditLog_DanhMuc" name="9. Ghi nhan Audit Log" camunda:delegateExpression="${catalogProcessDelegate}">
+      <bpmn:documentation>Ghi nhan nhat ky kiem toan: Loai thao tac (Tao moi/Cap nhat/Ngung/Xoa), Ma hang, Ten hang, Nhom hang, Nguoi thao tac, Thoi gian, IP.</bpmn:documentation>
+      <bpmn:incoming>Flow_KKTSOk_ToAuditLog</bpmn:incoming>
+      <bpmn:incoming>Flow_LuuCapNhat_ToAuditLog</bpmn:incoming>
+      <bpmn:incoming>Flow_Ngung_ToAuditLog</bpmn:incoming>
+      <bpmn:incoming>Flow_XoaHoanToan_ToAuditLog</bpmn:incoming>
+      <bpmn:outgoing>Flow_AuditLog_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ThanhCong" name="Hoan tat quan ly danh muc thanh cong">
+      <bpmn:incoming>Flow_AuditLog_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_LoiTrungMa" name="Tu choi: Ma hang bi trung">
+      <bpmn:incoming>Flow_LoiTrungMa_ToEnd</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorDef_EndTrungMa" errorRef="Error_TrungMaHang" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_LoiDuLieu" name="Tu choi: Du lieu khai bao khong hop le">
+      <bpmn:incoming>Flow_LoiDuLieu_ToEnd</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorDef_EndDuLieu" errorRef="Error_DuLieuKhongHopLe" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_LoiKhoiTao" name="Tu choi: Loi khoi tao the kho KKTS">
+      <bpmn:incoming>Flow_LoiKhoiTao_ToEnd</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorDef_EndKhoiTao" errorRef="Error_KhoiTaoThatBai" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_LoiXoa" name="Tu choi: Khong duoc phep xoa ma hang da phat sinh">
+      <bpmn:incoming>Flow_LoiXoa_ToEnd</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorDef_EndXoa" errorRef="Error_XoaKhongDuocPhep" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_ToGateway" sourceRef="Start_DanhMuc" targetRef="GW_LoaiThaoTac" />
+    <bpmn:sequenceFlow id="Flow_Default_TaoMoi" sourceRef="GW_LoaiThaoTac" targetRef="Task_NhapThongTinMaHang" />
+    <bpmn:sequenceFlow id="Flow_TaoMoi_ToKiemTraTrung" sourceRef="Task_NhapThongTinMaHang" targetRef="Task_KiemTraTrungMa" />
+    <bpmn:sequenceFlow id="Flow_MaOK_ToKiemTraTen" sourceRef="Task_KiemTraTrungMa" targetRef="Task_KiemTraTenGanGiong" />
+    <bpmn:sequenceFlow id="Flow_KiemTraTen_ToGateway" sourceRef="Task_KiemTraTenGanGiong" targetRef="GW_TenTrung" />
+    <bpmn:sequenceFlow id="Flow_TenOK_ToLuu" sourceRef="GW_TenTrung" targetRef="Task_LuuMaHang" />
+    <bpmn:sequenceFlow id="Flow_TenTrung_ToCanhBao" sourceRef="GW_TenTrung" targetRef="Task_CanhBaoTenTrung">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${tenTrungHoanToan == true || tenGanGiong == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_XacNhan_ToLuu" sourceRef="Task_CanhBaoTenTrung" targetRef="Task_LuuMaHang" />
+    <bpmn:sequenceFlow id="Flow_LuuOK_ToKhoiTaoThe" sourceRef="Task_LuuMaHang" targetRef="Task_KhoiTaoTheKho" />
+    <bpmn:sequenceFlow id="Flow_TheKhoOK_ToKhoiTaoKKTS" sourceRef="Task_KhoiTaoTheKho" targetRef="Task_KhoiTaoDongKKTS" />
+    <bpmn:sequenceFlow id="Flow_KKTSOk_ToAuditLog" sourceRef="Task_KhoiTaoDongKKTS" targetRef="Task_GhiAuditLog_DanhMuc" />
+    <bpmn:sequenceFlow id="Flow_LoiTrungMa_ToEnd" sourceRef="Boundary_TrungMa" targetRef="End_LoiTrungMa" />
+    <bpmn:sequenceFlow id="Flow_LoiDuLieu_ToEnd" sourceRef="Boundary_DuLieuKhongHopLe" targetRef="End_LoiDuLieu" />
+    <bpmn:sequenceFlow id="Flow_LoiKhoiTao_ToEnd" sourceRef="Boundary_KhoiTaoThatBai" targetRef="End_LoiKhoiTao" />
+    <bpmn:sequenceFlow id="Flow_CapNhat" sourceRef="GW_LoaiThaoTac" targetRef="Task_CapNhatThongTinMaHang">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${loaiThaoTac == 'CAP_NHAT'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CapNhat_ToKiemTra" sourceRef="Task_CapNhatThongTinMaHang" targetRef="Task_KiemTraDuLieuCapNhat" />
+    <bpmn:sequenceFlow id="Flow_CapNhatOK_ToLuu" sourceRef="Task_KiemTraDuLieuCapNhat" targetRef="Task_LuuCapNhat" />
+    <bpmn:sequenceFlow id="Flow_LuuCapNhat_ToAuditLog" sourceRef="Task_LuuCapNhat" targetRef="Task_GhiAuditLog_DanhMuc" />
+    <bpmn:sequenceFlow id="Flow_XoaHoacNgung" sourceRef="GW_LoaiThaoTac" targetRef="Task_YeuCauXoaHoacNgung">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${loaiThaoTac == 'XOA' || loaiThaoTac == 'NGUNG_SU_DUNG' || loaiThaoTac == 'XOA_NGUNG'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Ngung_ToKiemTraPhatSinh" sourceRef="Task_YeuCauXoaHoacNgung" targetRef="Task_KiemTraPhatSinhGiaoDich" />
+    <bpmn:sequenceFlow id="Flow_PhatSinh_ToGateway" sourceRef="Task_KiemTraPhatSinhGiaoDich" targetRef="GW_DaPhatSinh" />
+    <bpmn:sequenceFlow id="Flow_ChuaPhatSinh_XoaHoan" name="Chua phat sinh" sourceRef="GW_DaPhatSinh" targetRef="Task_XoaHoanToanMaHang" />
+    <bpmn:sequenceFlow id="Flow_DaPhatSinh_ChuyenNgung" name="Da phat sinh" sourceRef="GW_DaPhatSinh" targetRef="Task_ChuyenTrangThaiNgung">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${daPhatSinh == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Ngung_ToAuditLog" sourceRef="Task_ChuyenTrangThaiNgung" targetRef="Task_GhiAuditLog_DanhMuc" />
+    <bpmn:sequenceFlow id="Flow_XoaHoanToan_ToAuditLog" sourceRef="Task_XoaHoanToanMaHang" targetRef="Task_GhiAuditLog_DanhMuc" />
+    <bpmn:sequenceFlow id="Flow_LoiXoa_ToEnd" sourceRef="Boundary_XoaKhongDuocPhep" targetRef="End_LoiXoa" />
+    <bpmn:sequenceFlow id="Flow_AuditLog_ToEnd" sourceRef="Task_GhiAuditLog_DanhMuc" targetRef="End_ThanhCong" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_DanhMucAnPham">
+    <bpmndi:BPMNPlane id="BPMNPlane_DanhMucAnPham" bpmnElement="Process_QuanLyDanhMucAnPham">
+      <bpmndi:BPMNShape id="Lane_HeThong_DanhMuc_di" bpmnElement="Lane_HeThong_DanhMuc" isHorizontal="true">
+        <dc:Bounds x="160" y="280" width="2150" height="640" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_NguoiDung_DanhMuc_di" bpmnElement="Lane_NguoiDung_DanhMuc" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="2150" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_DanhMuc_di" bpmnElement="Start_DanhMuc">
+        <dc:Bounds x="222" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="196" y="205" width="90" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_LoaiThaoTac_di" bpmnElement="GW_LoaiThaoTac" isMarkerVisible="true">
+        <dc:Bounds x="345" y="155" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="326" y="128" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NhapThongTinMaHang_di" bpmnElement="Task_NhapThongTinMaHang" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372">
+        <dc:Bounds x="460" y="140" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KiemTraTrungMa_di" bpmnElement="Task_KiemTraTrungMa" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="680" y="340" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KiemTraTenGanGiong_di" bpmnElement="Task_KiemTraTenGanGiong" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="880" y="340" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_TenTrung_di" bpmnElement="GW_TenTrung" isMarkerVisible="true">
+        <dc:Bounds x="1085" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1060" y="320" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CanhBaoTenTrung_di" bpmnElement="Task_CanhBaoTenTrung" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372">
+        <dc:Bounds x="1060" y="140" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_LuuMaHang_di" bpmnElement="Task_LuuMaHang" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1300" y="340" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KhoiTaoTheKho_di" bpmnElement="Task_KhoiTaoTheKho" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1510" y="340" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KhoiTaoDongKKTS_di" bpmnElement="Task_KhoiTaoDongKKTS" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1730" y="340" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CapNhatThongTinMaHang_di" bpmnElement="Task_CapNhatThongTinMaHang" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372">
+        <dc:Bounds x="460" y="510" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KiemTraDuLieuCapNhat_di" bpmnElement="Task_KiemTraDuLieuCapNhat" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="680" y="510" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_LuuCapNhat_di" bpmnElement="Task_LuuCapNhat" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="900" y="510" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GhiAuditLog_DanhMuc_di" bpmnElement="Task_GhiAuditLog_DanhMuc" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1980" y="340" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ThanhCong_di" bpmnElement="End_ThanhCong" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
+        <dc:Bounds x="2192" y="362" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2166" y="405" width="90" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LoiDuLieu_di" bpmnElement="End_LoiDuLieu" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1357" y="490" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1331" y="533" width="90" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LoiKhoiTao_di" bpmnElement="End_LoiKhoiTao" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1572" y="490" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1545" y="533" width="92" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LoiTrungMa_di" bpmnElement="End_LoiTrungMa" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="802" y="442" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="778" y="485" width="85" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_YeuCauXoaHoacNgung_di" bpmnElement="Task_YeuCauXoaHoacNgung" bioc:stroke="#0d4372" bioc:fill="#bbdefb" color:background-color="#bbdefb" color:border-color="#0d4372">
+        <dc:Bounds x="460" y="730" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_KiemTraPhatSinhGiaoDich_di" bpmnElement="Task_KiemTraPhatSinhGiaoDich" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="690" y="730" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ChuyenTrangThaiNgung_di" bpmnElement="Task_ChuyenTrangThaiNgung" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1350" y="650" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_XoaHoanToanMaHang_di" bpmnElement="Task_XoaHoanToanMaHang" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1350" y="800" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_DaPhatSinh_di" bpmnElement="GW_DaPhatSinh" isMarkerVisible="true">
+        <dc:Bounds x="1085" y="745" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1067" y="720" width="86" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LoiXoa_di" bpmnElement="End_LoiXoa" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1650" y="862" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1623" y="905" width="91" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_KhoiTaoThatBai_di" bpmnElement="Boundary_KhoiTaoThatBai">
+        <dc:Bounds x="1572" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_DuLieuKhongHopLe_di" bpmnElement="Boundary_DuLieuKhongHopLe">
+        <dc:Bounds x="1357" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_TrungMa_di" bpmnElement="Boundary_TrungMa">
+        <dc:Bounds x="737" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_XoaKhongDuocPhep_di" bpmnElement="Boundary_XoaKhongDuocPhep">
+        <dc:Bounds x="1422" y="862" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_ToGateway_di" bpmnElement="Flow_Start_ToGateway">
+        <di:waypoint x="258" y="180" />
+        <di:waypoint x="345" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Default_TaoMoi_di" bpmnElement="Flow_Default_TaoMoi">
+        <di:waypoint x="395" y="180" />
+        <di:waypoint x="460" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="408" y="162" width="43" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TaoMoi_ToKiemTraTrung_di" bpmnElement="Flow_TaoMoi_ToKiemTraTrung">
+        <di:waypoint x="540" y="220" />
+        <di:waypoint x="540" y="380" />
+        <di:waypoint x="680" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MaOK_ToKiemTraTen_di" bpmnElement="Flow_MaOK_ToKiemTraTen">
+        <di:waypoint x="830" y="380" />
+        <di:waypoint x="880" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_KiemTraTen_ToGateway_di" bpmnElement="Flow_KiemTraTen_ToGateway">
+        <di:waypoint x="1030" y="380" />
+        <di:waypoint x="1085" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TenOK_ToLuu_di" bpmnElement="Flow_TenOK_ToLuu">
+        <di:waypoint x="1135" y="380" />
+        <di:waypoint x="1300" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1183" y="362" width="55" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TenTrung_ToCanhBao_di" bpmnElement="Flow_TenTrung_ToCanhBao">
+        <di:waypoint x="1110" y="355" />
+        <di:waypoint x="1110" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1115" y="275" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_XacNhan_ToLuu_di" bpmnElement="Flow_XacNhan_ToLuu">
+        <di:waypoint x="1240" y="180" />
+        <di:waypoint x="1375" y="180" />
+        <di:waypoint x="1375" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LuuOK_ToKhoiTaoThe_di" bpmnElement="Flow_LuuOK_ToKhoiTaoThe">
+        <di:waypoint x="1450" y="380" />
+        <di:waypoint x="1510" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TheKhoOK_ToKhoiTaoKKTS_di" bpmnElement="Flow_TheKhoOK_ToKhoiTaoKKTS">
+        <di:waypoint x="1670" y="380" />
+        <di:waypoint x="1730" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_KKTSOk_ToAuditLog_di" bpmnElement="Flow_KKTSOk_ToAuditLog">
+        <di:waypoint x="1910" y="380" />
+        <di:waypoint x="1980" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LoiTrungMa_ToEnd_di" bpmnElement="Flow_LoiTrungMa_ToEnd">
+        <di:waypoint x="755" y="438" />
+        <di:waypoint x="755" y="460" />
+        <di:waypoint x="802" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LoiDuLieu_ToEnd_di" bpmnElement="Flow_LoiDuLieu_ToEnd">
+        <di:waypoint x="1375" y="438" />
+        <di:waypoint x="1375" y="490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LoiKhoiTao_ToEnd_di" bpmnElement="Flow_LoiKhoiTao_ToEnd">
+        <di:waypoint x="1590" y="438" />
+        <di:waypoint x="1590" y="490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CapNhat_di" bpmnElement="Flow_CapNhat">
+        <di:waypoint x="370" y="205" />
+        <di:waypoint x="370" y="550" />
+        <di:waypoint x="460" y="550" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="376" y="370" width="50" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CapNhat_ToKiemTra_di" bpmnElement="Flow_CapNhat_ToKiemTra">
+        <di:waypoint x="620" y="550" />
+        <di:waypoint x="680" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CapNhatOK_ToLuu_di" bpmnElement="Flow_CapNhatOK_ToLuu">
+        <di:waypoint x="840" y="550" />
+        <di:waypoint x="900" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LuuCapNhat_ToAuditLog_di" bpmnElement="Flow_LuuCapNhat_ToAuditLog">
+        <di:waypoint x="1050" y="550" />
+        <di:waypoint x="2055" y="550" />
+        <di:waypoint x="2055" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_XoaHoacNgung_di" bpmnElement="Flow_XoaHoacNgung">
+        <di:waypoint x="370" y="205" />
+        <di:waypoint x="370" y="770" />
+        <di:waypoint x="460" y="770" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="376" y="458" width="66" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ngung_ToKiemTraPhatSinh_di" bpmnElement="Flow_Ngung_ToKiemTraPhatSinh">
+        <di:waypoint x="620" y="770" />
+        <di:waypoint x="690" y="770" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PhatSinh_ToGateway_di" bpmnElement="Flow_PhatSinh_ToGateway">
+        <di:waypoint x="850" y="770" />
+        <di:waypoint x="1085" y="770" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DaPhatSinh_ChuyenNgung_di" bpmnElement="Flow_DaPhatSinh_ChuyenNgung">
+        <di:waypoint x="1110" y="745" />
+        <di:waypoint x="1110" y="690" />
+        <di:waypoint x="1350" y="690" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1120" y="670" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ChuaPhatSinh_XoaHoan_di" bpmnElement="Flow_ChuaPhatSinh_XoaHoan">
+        <di:waypoint x="1110" y="795" />
+        <di:waypoint x="1110" y="840" />
+        <di:waypoint x="1350" y="840" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1120" y="845" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ngung_ToAuditLog_di" bpmnElement="Flow_Ngung_ToAuditLog">
+        <di:waypoint x="1530" y="690" />
+        <di:waypoint x="2055" y="690" />
+        <di:waypoint x="2055" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_XoaHoanToan_ToAuditLog_di" bpmnElement="Flow_XoaHoanToan_ToAuditLog">
+        <di:waypoint x="1530" y="840" />
+        <di:waypoint x="2055" y="840" />
+        <di:waypoint x="2055" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LoiXoa_ToEnd_di" bpmnElement="Flow_LoiXoa_ToEnd">
+        <di:waypoint x="1458" y="880" />
+        <di:waypoint x="1650" y="880" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AuditLog_ToEnd_di" bpmnElement="Flow_AuditLog_ToEnd">
+        <di:waypoint x="2130" y="380" />
+        <di:waypoint x="2192" y="380" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

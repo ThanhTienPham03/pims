@@ -1,0 +1,676 @@
+/* Google Fonts are loaded via <link> in index.html */
+
+/* ============================================================
+   SAIGONBANK BRAND TOKENS
+   ============================================================ */
+:root {
+  /* Saigonbank Brand */
+  --sgb-navy-900: #001A33;
+  --sgb-navy-800: #002B54;
+  --sgb-navy-700: #004080;
+  --sgb-navy-600: #0056A3;
+  --sgb-navy-500: #0070D2;
+  --sgb-navy-100: #E0F2FE;
+  --sgb-navy-50:  #F0F9FF;
+
+  --sgb-gold-600: #D97706;
+  --sgb-gold-500: #F5A623;
+  --sgb-gold-400: #FBBF24;
+  --sgb-gold-100: #FEF3C7;
+  --sgb-gold-50:  #FFFBEB;
+
+  /* Sidebar theme */
+  --sidebar-bg:           #2673BE;
+  --sidebar-border:       rgba(255,255,255,0.12);
+  --sidebar-text:         rgba(255,255,255,0.85);
+  --sidebar-text-hover:   #ffffff;
+  --sidebar-hover-bg:     rgba(255,255,255,0.12);
+  --sidebar-active-bg:    rgba(255,255,255,0.22);
+  --sidebar-active-text:  #ffffff;
+  --sidebar-active-border:#ffffff;
+
+  /* Bootstrap overrides */
+  --bs-primary:            #0056A3;
+  --bs-primary-rgb:        0, 86, 163;
+  --bs-link-color:         #0056A3;
+  --bs-link-hover-color:   #004B8F;
+  --bs-body-font-family:   'Be Vietnam Pro', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --bs-body-font-size:     0.9125rem;
+  --bs-body-color:         #0F172A;
+  --bs-body-bg:            #f0f2f5;
+  --bs-border-color:       #E2E8F0;
+  --bs-border-radius:      8px;
+  --bs-border-radius-sm:   4px;
+  --bs-border-radius-lg:   12px;
+  --bs-border-radius-xl:   16px;
+
+  /* Legacy tokens */
+  --bg-main:         #f0f2f5;
+  --bg-card:         #FFFFFF;
+  --bg-sidebar:      #2673BE;
+  --border-color:    #E2E8F0;
+  --border-focus:    #0056A3;
+  --text-primary:    #0F172A;
+  --text-secondary:  #475569;
+  --text-muted:      #94A3B8;
+
+  /* Status */
+  --color-success:        #059669;
+  --color-success-bg:     #D1FAE5;
+  --color-success-border: #A7F3D0;
+  --color-warning:        #D97706;
+  --color-warning-bg:     #FEF3C7;
+  --color-warning-border: #FDE68A;
+  --color-danger:         #DC2626;
+  --color-danger-bg:      #FEE2E2;
+  --color-danger-border:  #FECACA;
+  --color-info:           #2563EB;
+  --color-info-bg:        #DBEAFE;
+  --color-info-border:    #BFDBFE;
+
+  --font-family:  'Be Vietnam Pro', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ============================================================
+   GLOBAL BASE
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.15); border-radius: 10px; }
+.sgb-sidebar ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES — Buttons
+   ============================================================ */
+.btn-primary {
+  background: linear-gradient(135deg, #0056A3 0%, #004080 100%) !important;
+  border-color: #0056A3 !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0,86,163,0.25) !important;
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #004B8F 0%, #003366 100%) !important;
+  border-color: #004B8F !important;
+  box-shadow: 0 4px 12px rgba(0,86,163,0.35) !important;
+}
+.btn-primary:focus, .btn-primary:active {
+  box-shadow: 0 0 0 0.25rem rgba(0,86,163,0.25) !important;
+}
+.btn-outline-primary {
+  color: #0056A3 !important;
+  border-color: #0056A3 !important;
+}
+.btn-outline-primary:hover {
+  background-color: #0056A3 !important;
+  color: #fff !important;
+}
+
+/* Green accent button */
+.btn-gold {
+  background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.3);
+}
+.btn-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(34,197,94,0.45);
+}
+
+/* Links */
+a { color: var(--sgb-navy-600); }
+a:hover { color: var(--sgb-navy-700); }
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES — Cards
+   ============================================================ */
+.card {
+  border-color: var(--border-color) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+  border-radius: 12px !important;
+}
+.card-header {
+  background-color: #FFFFFF !important;
+  border-bottom-color: var(--border-color) !important;
+  font-weight: 600;
+  border-radius: 12px 12px 0 0 !important;
+}
+.card-footer {
+  background-color: #FAFBFC !important;
+  border-top-color: var(--border-color) !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES — Tables
+   ============================================================ */
+.table {
+  font-size: 0.8438rem;
+}
+.table > thead > tr > th {
+  background-color: #f8fafc;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.table > tbody > tr {
+  transition: background 0.12s ease;
+}
+.table > tbody > tr:hover > td {
+  background-color: #f8fafc;
+}
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES — Forms
+   ============================================================ */
+.form-control, .form-select {
+  border-radius: 8px !important;
+  font-size: 0.875rem;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--sgb-navy-600);
+  box-shadow: 0 0 0 0.2rem rgba(0,86,163,0.15);
+}
+.form-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  margin-bottom: 0.375rem;
+}
+
+/* ============================================================
+   BOOTSTRAP OVERRIDES — Badges
+   ============================================================ */
+
+.badge-group {
+  background: #F1F5F9;
+  color: #334155;
+  font-family: monospace;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+}
+
+/* ============================================================
+   PAGE HERO — Reusable gradient banner for page headers
+   ============================================================ */
+.page-hero {
+  background: linear-gradient(135deg, #185089 0%, #2673BE 55%, #1d5f9e 100%);
+  border-left: 5px solid #F5A623;
+  border-radius: 14px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.page-hero::before {
+  content: '';
+  position: absolute;
+  width: 320px; height: 320px;
+  top: -120px; right: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+.page-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 50px;
+  padding: 4px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+.page-hero h1, .page-hero h2 {
+  color: #ffffff !important;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.page-hero p {
+  color: rgba(255,255,255,0.85) !important;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   SIDEBAR — Dark Navy Theme
+   ============================================================ */
+.sgb-sidebar {
+  width: 256px;
+  min-width: 256px;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+.sgb-sidebar.collapsed {
+  width: 76px;
+  min-width: 76px;
+}
+.sgb-sidebar .nav-link {
+  color: var(--sidebar-text);
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.6rem 0.875rem;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-left: 3px solid transparent;
+  margin-bottom: 2px;
+}
+.sgb-sidebar.collapsed .nav-link {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-left-width: 0;
+}
+.sgb-sidebar .nav-link:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-text-hover);
+}
+.sgb-sidebar .nav-link.active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  font-weight: 600;
+  border-left-color: var(--sidebar-active-border);
+}
+.sgb-sidebar .nav-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.65);
+  padding: 0 0.875rem;
+  margin-bottom: 6px;
+  margin-top: 16px;
+}
+.sgb-sidebar .sgb-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: 0;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  padding: 0 0.875rem;
+  color: rgba(255,255,255,0.7);
+}
+.sgb-sidebar .sgb-section-toggle:hover {
+  color: #ffffff;
+}
+.sgb-sidebar .sgb-section-toggle i {
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+.sgb-sidebar .sgb-section-toggle-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sgb-sidebar .sgb-sidebar-collapse-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+}
+.sgb-sidebar .sgb-sidebar-collapse-btn:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+/* ============================================================
+   HEADER & SIDEBAR UTILITIES
+   ============================================================ */
+.sgb-header {
+  height: 64px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.sgb-header-greeting {
+  font-size: 1rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.sgb-header-greeting-name {
+  color: var(--sgb-navy-700);
+}
+
+.sgb-header-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sgb-header-time-badge {
+  font-size: 0.72rem;
+  background: var(--sgb-navy-50);
+  color: var(--sgb-navy-600);
+  border: 1px solid var(--color-info-border);
+}
+
+.sgb-header-name {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  max-width: 160px;
+}
+
+.sgb-header-avatar {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, var(--sgb-navy-800) 0%, var(--sgb-navy-600) 100%);
+  color: #ffffff;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0,86,163,0.3);
+}
+
+.sgb-header-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-color);
+}
+
+.sgb-header-logout-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+
+.sgb-header-logout-btn:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+
+.sgb-role-badge {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.sgb-role-badge.ADMIN {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.sgb-role-badge.CONTROLLER {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+.sgb-role-badge.USER {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Sidebar Utilities */
+.sgb-sidebar-nav-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.sgb-sidebar-brand-row {
+  height: 64px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.sgb-sidebar-logo-img {
+  height: 32px;
+  width: auto;
+  filter: brightness(0) invert(1);
+}
+
+.sgb-sidebar-divider {
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+
+.sgb-sidebar-footer-row {
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.sgb-sidebar-pulse {
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.sgb-sidebar-version {
+  color: rgba(255,255,255,0.95);
+  font-size: 0.78rem;
+}
+
+.sgb-sidebar-subtext {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.7rem;
+}
+
+/* ============================================================
+   STAT CARD COMPONENT
+   ============================================================ */
+.sgb-stat-card {
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.sgb-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+}
+
+.sgb-stat-card.theme-navy  { border-top: 4px solid var(--sgb-navy-800) !important; }
+.sgb-stat-card.theme-gold  { border-top: 4px solid var(--sgb-gold-500) !important; }
+.sgb-stat-card.theme-green { border-top: 4px solid #10B981 !important; }
+.sgb-stat-card.theme-blue  { border-top: 4px solid #3B82F6 !important; }
+
+.sgb-stat-card-title {
+  font-size: 11.5px;
+  letter-spacing: 0.5px;
+}
+
+.sgb-stat-card-value {
+  font-size: 1.75rem;
+  color: var(--sgb-navy-900);
+  line-height: 1.2;
+}
+
+.sgb-stat-card-subtext {
+  font-size: 12.5px;
+}
+
+.sgb-stat-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  font-size: 26px;
+  z-index: 1;
+}
+
+.sgb-stat-card-icon.theme-navy  {
+  background: linear-gradient(135deg, rgba(0,43,84,0.1) 0%, rgba(255,255,255,0.8) 100%);
+  color: var(--sgb-navy-800);
+  border: 1px solid rgba(0,43,84,0.1);
+}
+.sgb-stat-card-icon.theme-gold  {
+  background: linear-gradient(135deg, rgba(245,166,35,0.12) 0%, rgba(255,255,255,0.8) 100%);
+  color: #D97706;
+  border: 1px solid rgba(245,166,35,0.12);
+}
+.sgb-stat-card-icon.theme-green {
+  background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(255,255,255,0.8) 100%);
+  color: #059669;
+  border: 1px solid rgba(16,185,129,0.12);
+}
+.sgb-stat-card-icon.theme-blue  {
+  background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(255,255,255,0.8) 100%);
+  color: #2563EB;
+  border: 1px solid rgba(59,130,246,0.12);
+}
+
+.sgb-stat-card-glow {
+  width: 100px;
+  height: 100px;
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.sgb-stat-card-glow.theme-navy  { background: radial-gradient(circle, rgba(0,43,84,0.1) 0%, rgba(255,255,255,0) 70%); }
+.sgb-stat-card-glow.theme-gold  { background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, rgba(255,255,255,0) 70%); }
+.sgb-stat-card-glow.theme-green { background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, rgba(255,255,255,0) 70%); }
+.sgb-stat-card-glow.theme-blue  { background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(255,255,255,0) 70%); }
+
+/* ============================================================
+   DASHBOARD BANNER
+   ============================================================ */
+.sgb-dashboard-banner {
+  background: linear-gradient(135deg, #185089 0%, #2673BE 60%, #1d5f9e 100%);
+  border-left: 6px solid var(--sgb-gold-500);
+}
+
+.sgb-dashboard-banner-title {
+  font-size: 1.75rem;
+  letter-spacing: -0.5px;
+}
+
+.sgb-dashboard-banner-desc {
+  max-width: 600px;
+}
+
+.sgb-dashboard-banner-glow {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%);
+  top: -100px;
+  right: -50px;
+  pointer-events: none;
+}
+
+.sgb-btn-banner-light {
+  color: var(--sgb-navy-900);
+}
+
+.sgb-btn-banner-glass {
+  border: 2px solid rgba(255,255,255,0.4);
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================================
+   ACTIVITY LOG ACTION BADGES
+   ============================================================ */
+.badge-action-create     { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.badge-action-cancel     { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.badge-action-update     { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.badge-action-delete     { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
+.badge-action-deactivate { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.badge-action-login      { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-action-lock       { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.badge-action-unlock     { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+.badge-action-default    { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+@keyframes highlightFlash {
+  0% { background-color: rgba(38, 115, 190, 0.2); }
+  100% { background-color: transparent; }
+}
+.row-highlight-new {
+  animation: highlightFlash 3s ease-out forwards;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+@media print {
+  aside, header, button, .btn, .card-header button { display: none !important; }
+  body, #root, main {
+    background: #FFFFFF !important;
+    padding: 0 !important; margin: 0 !important; width: 100% !important;
+  }
+  .table th, .table td { border: 1px solid #000 !important; color: #000 !important; }
+}
+

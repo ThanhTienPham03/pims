@@ -1,0 +1,36 @@
+/* App-level utility styles */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom transitions and glow effects */
+.glow-gold {
+  box-shadow: 0 0 15px rgba(245, 166, 35, 0.35);
+}
+
+.glow-navy {
+  box-shadow: 0 0 15px rgba(0, 51, 102, 0.35);
+}
+
+/* Print Styles for KKTS Report */
+@media print {
+  aside, header, button, .btn, .card-header button {
+    display: none !important;
+  }
+  body, #root, main {
+    background: #FFFFFF !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .table-container {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .table th, .table td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+  }
+}
