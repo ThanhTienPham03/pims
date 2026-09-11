@@ -1,0 +1,22 @@
+# Environment variables & Sensitive files
+.env
+.env.*
+.env.local
+!.env.example
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Java / Maven / Backend
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+
+# IDE & OS files
+.idea/
+.vscode/
+*.iml
+*.DS_Store
+Thumbs.db
