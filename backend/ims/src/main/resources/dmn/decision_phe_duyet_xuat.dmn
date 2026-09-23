@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:camunda="http://camunda.org/schema/1.0/dmn" id="Definitions_PheDuyetXuat" name="DRD Phe Duyet Xuat" namespace="http://saigonbank.fit/ims/dmn" exporter="Camunda Modeler" exporterVersion="5.50.1">
+  <decision id="Decision_PheDuyetXuat" name="Quyết định Phê duyệt Xuất Ấn Phẩm" camunda:historyTimeToLive="365">
+    <decisionTable id="DecisionTable_PheDuyetXuat" hitPolicy="FIRST">
+      <input id="Input_NhomHang" label="Nhóm hàng" camunda:inputVariable="nhomHang">
+        <inputExpression id="InputExp_NhomHang" typeRef="string">
+          <text>nhomHang</text>
+        </inputExpression>
+      </input>
+      <input id="Input_TongTien" label="Tổng tiền (VNĐ)" camunda:inputVariable="tongTien">
+        <inputExpression id="InputExp_TongTien" typeRef="double">
+          <text>tongTien</text>
+        </inputExpression>
+      </input>
+      <output id="Output_CanPheDuyet" label="Cần phê duyệt?" name="canPheDuyet" typeRef="boolean" />
+      <output id="Output_CapPheDuyet" label="Cấp phê duyệt" name="capPheDuyet" typeRef="string" />
+      <output id="Output_HanDuyetGio" label="Thời hạn duyệt (giờ)" name="hanDuyetGio" typeRef="integer" />
+      <output id="Output_MoTaLyDo" label="Căn cứ quy chế" name="moTaLyDo" typeRef="string" />
+      <rule id="Rule_ACQT">
+        <description>Ấn chỉ quan trọng kiểm soát đặc biệt</description>
+        <inputEntry id="UnaryTests_NhomACQT">
+          <text>"ACQT"</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_TienACQT">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExp_Duyet_ACQT">
+          <text>true</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Cap_ACQT">
+          <text>"BAN_GIAM_DOC"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Han_ACQT">
+          <text>24</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_MoTa_ACQT">
+          <text>"Ấn chỉ quan trọng thuộc danh mục kiểm soát đặc biệt, bắt buộc Ban Giám đốc phê duyệt"</text>
+        </outputEntry>
+      </rule>
+      <rule id="Rule_TienLon">
+        <description>Hạn mức giá trị lớn &gt;= 50 triệu</description>
+        <inputEntry id="UnaryTests_NhomTienLon">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_GiaTriTienLon">
+          <text>&gt;= 50000000</text>
+        </inputEntry>
+        <outputEntry id="LiteralExp_Duyet_TienLon">
+          <text>true</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Cap_TienLon">
+          <text>"BAN_GIAM_DOC"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Han_TienLon">
+          <text>24</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_MoTa_TienLon">
+          <text>"Giá trị xuất kho từ 50 triệu VNĐ trở lên thuộc thẩm quyền phê duyệt của Ban Giám đốc"</text>
+        </outputEntry>
+      </rule>
+      <rule id="Rule_TienTrungBinh">
+        <description>Hạn mức giá trị trung bình từ 10 đến 50 triệu</description>
+        <inputEntry id="UnaryTests_NhomTrungBinh">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_GiaTriTrungBinh">
+          <text>&gt;= 10000000</text>
+        </inputEntry>
+        <outputEntry id="LiteralExp_Duyet_TrungBinh">
+          <text>true</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Cap_TrungBinh">
+          <text>"TRUONG_PHONG"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Han_TrungBinh">
+          <text>12</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_MoTa_TrungBinh">
+          <text>"Giá trị xuất kho từ 10 đến dưới 50 triệu VNĐ do Trưởng phòng phê duyệt"</text>
+        </outputEntry>
+      </rule>
+      <rule id="Rule_TuDongDuyet">
+        <description>Xuất kho giá trị nhỏ &lt; 10 triệu tự động duyệt</description>
+        <inputEntry id="UnaryTests_NhomNho">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_GiaTriNho">
+          <text>&lt; 10000000</text>
+        </inputEntry>
+        <outputEntry id="LiteralExp_Duyet_Nho">
+          <text>false</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Cap_Nho">
+          <text>"TU_DONG"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_Han_Nho">
+          <text>0</text>
+        </outputEntry>
+        <outputEntry id="LiteralExp_MoTa_Nho">
+          <text>"Xuất kho thông thường dưới 10 triệu VNĐ — Hệ thống tự động duyệt xuất kho"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_PheDuyetXuat">
+      <dmndi:DMNShape id="DMNShape_Decision_PheDuyetXuat" dmnElementRef="Decision_PheDuyetXuat">
+        <dc:Bounds height="80" width="180" x="160" y="80" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

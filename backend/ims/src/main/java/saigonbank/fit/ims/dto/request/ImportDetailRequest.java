@@ -4,10 +4,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Data
-public class ImportDetailRequest {
+public class ImportDetailRequest implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @NotNull(message = "Product ID là bắt buộc")
     private Long productId;

@@ -7,9 +7,9 @@ import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 import saigonbank.fit.ims.dto.request.CreateProductRequest;
+import saigonbank.fit.ims.dto.request.UpdateProductRequest;
 import saigonbank.fit.ims.dto.response.ProductResponse;
 import saigonbank.fit.ims.service.ProductService;
-import saigonbank.fit.ims.service.AuditLogService;
 
 import java.math.BigDecimal;
 
@@ -30,7 +30,6 @@ import java.math.BigDecimal;
 public class CatalogProcessDelegate implements JavaDelegate {
 
     private final ProductService productService;
-    private final AuditLogService auditLogService;
 
     @Override
     public void execute(DelegateExecution execution) throws Exception {
@@ -157,9 +156,14 @@ public class CatalogProcessDelegate implements JavaDelegate {
         }
         // Inventory đã được tạo trong handleLuuMaHang (ProductService.createProductForCamunda)
         execution.setVariable("theKhoKhoiTao", true);
-        log.info("[Task_KhoiTaoTheKho] Thẻ kho đã được khởi tạo cho mã hàng '{}' (ID: {}).", maSo, productId);
-        auditLogService.logAction(username, "INIT_STOCK_CARD", "PRODUCT", maSo,
-                "[Camunda] Khởi tạo thẻ kho cho mã hàng: " + maSo + " — tồn ban đầu = 0");
+        log.info("""
+            \n================================================================================
+            📦 [CAMUNDA CATALOG STEP - KHỞI TẠO THẺ KHO]
+            ▶ Mã hàng               : {} (ID: {})
+            ▶ Người thực hiện       : {}
+            ▶ Kết quả               : Khởi tạo thẻ kho thành công (tồn ban đầu = 0)
+            ================================================================================
+            """, maSo, productId, username);
     }
 
     /**
@@ -175,9 +179,14 @@ public class CatalogProcessDelegate implements JavaDelegate {
         }
         // Kkts đã được tạo trong handleLuuMaHang (ProductService.createProductForCamunda)
         execution.setVariable("kktsKhoiTao", true);
-        log.info("[Task_KhoiTaoDongKKTS] Dòng KKTS đã được khởi tạo cho mã hàng '{}' (tồn ban đầu = 0).", maSo);
-        auditLogService.logAction(username, "INIT_KKTS", "PRODUCT", maSo,
-                "[Camunda] Khởi tạo dòng KKTS cho mã hàng: " + maSo + " — tồn SL=0, tồn tiền=0");
+        log.info("""
+            \n================================================================================
+            📊 [CAMUNDA CATALOG STEP - KHỞI TẠO BẢNG KÊ KKTS]
+            ▶ Mã hàng               : {} (ID: {})
+            ▶ Người thực hiện       : {}
+            ▶ Kết quả               : Khởi tạo dòng KKTS thành công (tồn SL=0, tồn tiền=0)
+            ================================================================================
+            """, maSo, productId, username);
     }
 
     // ─── NHÁNH 2: CẬP NHẬT ───────────────────────────────────────────────────
@@ -190,81 +199,60 @@ public class CatalogProcessDelegate implements JavaDelegate {
             throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Tên hàng không được để trống khi cập nhật.");
         }
         if (nhomHang == null || nhomHang.isBlank()) {
-            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Nhóm hàng không được để trống khi cập nhật.");
+            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Nhóm hàng không hợp lệ.");
         }
-        if (donViTinh == null || donViTinh.isBlank()) {
-            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Đơn vị tính không được để trống khi cập nhật.");
-        }
-        log.info("[Task_KiemTraDuLieuCapNhat] Dữ liệu cập nhật hợp lệ.");
+        log.info("[Task_KiemTraDuLieuCapNhat] Dữ liệu cập nhật hợp lệ (tenHang='{}', nhomHang='{}', DVT='{}').",
+                tenHang, nhomHang, donViTinh);
     }
 
     private void handleLuuCapNhat(DelegateExecution execution, String username) {
-        Long productId   = getLong(execution, "productId");
-        String tenHang   = (String) execution.getVariable("tenHang");
-        String donViTinh = (String) execution.getVariable("donViTinh");
-        String trangThai = (String) execution.getVariable("trangThai");
-        BigDecimal donGiaNhap = getBigDecimal(execution, "donGiaNhap");
-
+        Long productId = getLong(execution, "productId");
         if (productId == null) {
-            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Thiếu productId khi cập nhật mã hàng.");
+            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Thiếu productId khi cập nhật.");
         }
         try {
-            saigonbank.fit.ims.dto.request.UpdateProductRequest req =
-                    new saigonbank.fit.ims.dto.request.UpdateProductRequest();
-            req.setTenHang(tenHang);
-            req.setDonViTinh(donViTinh);
-            req.setDonGiaNhap(donGiaNhap);
-            req.setTrangThai(trangThai);
+            UpdateProductRequest req = new UpdateProductRequest();
+            req.setTenHang((String) execution.getVariable("tenHang"));
+            req.setDonViTinh((String) execution.getVariable("donViTinh"));
+            req.setTrangThai((String) execution.getVariable("trangThai"));
+            req.setDonGiaNhap(getBigDecimal(execution, "donGiaNhap"));
             productService.updateProduct(productId, req);
-            log.info("[Task_LuuCapNhat] Đã cập nhật mã hàng ID: {} bởi {}", productId, username);
+            log.info("[Task_LuuCapNhat] Đã lưu cập nhật cho mã hàng ID: {}", productId);
         } catch (Exception e) {
-            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Lỗi khi cập nhật: " + e.getMessage());
+            log.error("[Task_LuuCapNhat] Lỗi khi cập nhật mã hàng: {}", e.getMessage());
+            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Cập nhật mã hàng thất bại: " + e.getMessage());
         }
     }
 
-    // ─── NHÁNH 3: XÓA / NGƯNG ────────────────────────────────────────────────
+    // ─── NHÁNH 3: XÓA HOẶC NGƯNG SỬ DỤNG ────────────────────────────────────
 
     private void handleKiemTraPhatSinh(DelegateExecution execution) {
         Long productId = getLong(execution, "productId");
         if (productId == null) {
-            execution.setVariable("daPhatSinh", true);
-            log.warn("[Task_KiemTraPhatSinhGiaoDich] Không có productId, mặc định daPhatSinh = true.");
-            return;
+            throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Thiếu productId khi kiểm tra phát sinh.");
         }
-        boolean daPhatSinh = productService.hasTransactions(productId);
-        execution.setVariable("daPhatSinh", daPhatSinh);
-        log.info("[Task_KiemTraPhatSinhGiaoDich] Mã hàng ID {} — đã phát sinh: {}", productId, daPhatSinh);
+        boolean coPhatSinh = productService.hasTransactions(productId);
+        execution.setVariable("coPhatSinhGiaoDich", coPhatSinh);
+        log.info("[Task_KiemTraPhatSinhGiaoDich] Hàng hóa ID {} có phát sinh giao dịch: {}", productId, coPhatSinh);
     }
 
     private void handleChuyenTrangThaiNgung(DelegateExecution execution, String username) {
-        Long productId  = getLong(execution, "productId");
-        if (productId == null) {
-            log.warn("[Task_ChuyenTrangThaiNgung] Thiếu productId khi ngưng sử dụng mã hàng.");
-            return;
-        }
-        try {
+        Long productId = getLong(execution, "productId");
+        if (productId != null) {
             productService.deactivateProduct(productId);
-            log.info("[Task_ChuyenTrangThaiNgung] Đã chuyển sang Ngưng sử dụng cho mã hàng ID: {}", productId);
-        } catch (Exception e) {
-            log.info("[Task_ChuyenTrangThaiNgung] Đã xử lý ngưng sử dụng trước đó (ID: {}): {}", productId, e.getMessage());
+            log.info("[Task_ChuyenTrangThaiNgung] Đã chuyển mã hàng ID {} sang NGƯNG SỬ DỤNG.", productId);
         }
     }
 
     private void handleXoaHoanToanMaHang(DelegateExecution execution, String username) {
-        Long productId  = getLong(execution, "productId");
-        if (productId == null) {
-            log.warn("[Task_XoaHoanToanMaHang] Thiếu productId khi xóa hoàn toàn mã hàng.");
-            return;
-        }
-        try {
+        Long productId = getLong(execution, "productId");
+        if (productId != null) {
             productService.deleteProduct(productId);
-            log.info("[Task_XoaHoanToanMaHang] Đã xóa hoàn toàn mã hàng ID: {}", productId);
-        } catch (Exception e) {
-            log.info("[Task_XoaHoanToanMaHang] Đã xử lý xóa trước đó (ID: {}): {}", productId, e.getMessage());
+            log.info("[Task_XoaHoanToanMaHang] Đã xóa hoàn toàn mã hàng ID {} (chưa có phát sinh).", productId);
         }
     }
 
-    // ─── AUDIT LOG ────────────────────────────────────────────────────────────
+    // ─── AUDIT LOG & HOÀN TẤT TIẾN TRÌNH (CHỈ GHI RA TERMINAL BACKEND) ───────
 
     private void handleAuditLog(DelegateExecution execution, String username) {
         String loaiThaoTac = (String) execution.getVariable("loaiThaoTac");
@@ -275,10 +263,23 @@ public class CatalogProcessDelegate implements JavaDelegate {
         );
         String tenHang = (String) execution.getVariable("tenHang");
 
-        auditLogService.logAction(username, "CAMUNDA_" + loaiThaoTac, "PRODUCT", maSo,
-                "[Camunda] Hoàn tất quy trình " + loaiThaoTac + " cho mã hàng: " + maSo
-                        + (tenHang != null ? " — " + tenHang : ""));
-        log.info("[Task_GhiAuditLog_DanhMuc] Đã ghi audit log cho {} mã hàng '{}'.", loaiThaoTac, maSo);
+        log.info("""
+            \n================================================================================
+            📋 [CAMUNDA CATALOG RESULT - KẾT QUẢ QUY TRÌNH DANH MỤC ẤN PHẨM]
+            ▶ Thao tác              : {}
+            ▶ Mã hàng               : {}
+            ▶ Tên hàng              : {}
+            ▶ Người thực hiện       : {}
+            ▶ Process Instance ID   : {}
+            ▶ Trạng thái            : Hoàn tất thành công quy trình Camunda
+            ================================================================================
+            """,
+            loaiThaoTac,
+            maSo,
+            tenHang != null ? tenHang : "N/A",
+            username,
+            execution.getProcessInstanceId()
+        );
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────

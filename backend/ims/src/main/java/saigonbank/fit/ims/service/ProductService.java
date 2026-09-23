@@ -38,20 +38,24 @@ public class ProductService {
     private final AuditLogService auditLogService;
 
     /**
-     * Tự động sinh mã hàng hóa tiếp theo theo nhóm hàng: <MÃ_NHÓM>-<STT 3 CHỮ SỐ>
-     * Ví dụ: VPP-003, ACTT-003, ACQT-002, VLK-002
+     * Tự động sinh mã hàng hóa tiếp theo theo nhóm hàng:
+     * + ACTT: 32F.9020100.STT
+     * + VPP:  32F.7100001.STT
+     * + ACQT: 32F.5010000.STT
+     * + VLK:  32F.9080117.STT
+     * Ví dụ: 32F.9020100.001, 32F.7100001.001
      */
     @Transactional(readOnly = true)
     public String generateNextMaSo(String nhomHang) {
-        String prefix = (nhomHang != null && !nhomHang.isBlank()) ? nhomHang.trim().toUpperCase() : "VPP";
+        String prefix = getProductCodePrefix(nhomHang);
         List<String> existingCodes = productRepository.findMaSoByPrefix(prefix);
         int maxSeq = 0;
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)");
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)$");
         for (String code : existingCodes) {
             if (code == null) continue;
             String clean = code.trim().toUpperCase();
-            if (clean.startsWith(prefix)) {
-                String remainder = clean.substring(prefix.length()).replaceAll("^[^0-9]+", "");
+            if (clean.startsWith(prefix.toUpperCase())) {
+                String remainder = clean.substring(prefix.length());
                 java.util.regex.Matcher matcher = pattern.matcher(remainder);
                 if (matcher.find()) {
                     try {
@@ -63,7 +67,80 @@ public class ProductService {
                 }
             }
         }
-        return String.format("%s-%03d", prefix, maxSeq + 1);
+        return String.format("%s%03d", prefix, maxSeq + 1);
+    }
+
+    /**
+     * Chuẩn hóa toàn bộ mã hàng cũ trong CSDL chưa theo cấu trúc 32F.xxxxxxx.STT.
+     * Tự động nhận diện nhóm hàng và bảo lưu số thứ tự hiện có nếu hợp lệ.
+     */
+    @Transactional
+    public int migrateAllLegacyProductCodes() {
+        List<Product> products = productRepository.findAll();
+        java.util.regex.Pattern numPattern = java.util.regex.Pattern.compile("(\\d+)$");
+        int count = 0;
+
+        for (Product product : products) {
+            String currentMaSo = product.getMaSo();
+            if (currentMaSo == null || currentMaSo.startsWith("32F.")) {
+                continue;
+            }
+
+            String groupCode = (product.getProductGroup() != null && product.getProductGroup().getCode() != null)
+                    ? product.getProductGroup().getCode()
+                    : null;
+            if (groupCode == null) {
+                String clean = currentMaSo.toUpperCase();
+                if (clean.startsWith("ACTT")) groupCode = "ACTT";
+                else if (clean.startsWith("ACQT")) groupCode = "ACQT";
+                else if (clean.startsWith("VPP")) groupCode = "VPP";
+                else if (clean.startsWith("VLK")) groupCode = "VLK";
+                else groupCode = "VPP";
+            }
+
+            String prefix = getProductCodePrefix(groupCode);
+
+            // Giữ lại STT từ mã cũ nếu có (ví dụ: ACQT-002 -> 2, ACQT-003 -> 3, VPP-003 -> 3)
+            java.util.regex.Matcher matcher = numPattern.matcher(currentMaSo.trim());
+            int targetSeq = -1;
+            if (matcher.find()) {
+                try {
+                    targetSeq = Integer.parseInt(matcher.group(1));
+                } catch (NumberFormatException ignored) {}
+            }
+
+            String newMaSo;
+            if (targetSeq > 0 && !productRepository.existsByMaSo(String.format("%s%03d", prefix, targetSeq))) {
+                newMaSo = String.format("%s%03d", prefix, targetSeq);
+            } else {
+                newMaSo = generateNextMaSo(groupCode);
+            }
+
+            product.setMaSo(newMaSo);
+            productRepository.save(product);
+            auditLogService.logAction("SYSTEM", "MIGRATE", "PRODUCT", newMaSo,
+                    "Chuyển đổi mã hàng từ " + currentMaSo + " sang " + newMaSo + " (" + product.getTenHang() + ")");
+            log.info("Migrated legacy product code: [{}] -> [{}] ({})", currentMaSo, newMaSo, product.getTenHang());
+            count++;
+        }
+        return count;
+    }
+
+    public static String getProductCodePrefix(String nhomHang) {
+        if (nhomHang == null || nhomHang.isBlank()) {
+            return "32F.7100001.";
+        }
+        String clean = nhomHang.trim().toUpperCase();
+        if (clean.startsWith("32F.")) {
+            return clean.endsWith(".") ? clean : clean + ".";
+        }
+        return switch (clean) {
+            case "ACTT" -> "32F.9020100.";
+            case "VPP"  -> "32F.7100001.";
+            case "ACQT" -> "32F.5010000.";
+            case "VLK"  -> "32F.9080117.";
+            default     -> clean + ".";
+        };
     }
 
     @Transactional

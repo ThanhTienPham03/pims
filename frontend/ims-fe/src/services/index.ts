@@ -88,6 +88,8 @@ export const productService = {
   getUnits: () => api.get<Unit[]>('/products/units'),
 
   getNextCode: (nhomHang: string) => api.get<{ maSo: string }>(`/products/next-code?nhomHang=${encodeURIComponent(nhomHang)}`),
+
+  migrateCodes: () => api.post<{ migratedCount: number; message: string }>('/products/migrate-codes'),
 };
 
 export const importService = {

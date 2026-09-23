@@ -64,6 +64,16 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PostMapping("/migrate-codes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> migrateLegacyCodes() {
+        int count = productService.migrateAllLegacyProductCodes();
+        return ResponseEntity.ok(ApiResponse.success(java.util.Map.of(
+                "migratedCount", count,
+                "message", "Đã chuẩn hóa " + count + " mã sản phẩm sang định dạng mới."
+        )));
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(

@@ -49,9 +49,8 @@ public class ExportController {
     public ResponseEntity<ApiResponse<ExportResponse>> createExport(
             @Valid @RequestBody ExportRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        ExportResponse response = exportService.createExport(request, userDetails.getUsername());
-        // Tự động kích hoạt quy trình Camunda
-        camundaWorkflowService.startExportWorkflow(response, userDetails.getUsername());
+        // Quy trình xuất được khởi chạy và điều phối bởi Camunda; ExportService chỉ được gọi qua Delegate của BPMN
+        ExportResponse response = camundaWorkflowService.startExportProcess(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Tạo phiếu xuất thành công", response));
     }
 

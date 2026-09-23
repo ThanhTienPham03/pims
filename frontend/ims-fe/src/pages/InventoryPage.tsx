@@ -90,7 +90,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ showToast }) => {
           <form onSubmit={handleSearch} className="d-flex gap-3 flex-wrap align-items-end">
             <div style={{ minWidth: 160, flex: '1 1 160px' }}>
               <label className="form-label">Mã hàng hóa</label>
-              <input type="text" className="form-control" placeholder="VD: ACQT001" value={searchMaSo} onChange={e => setSearchMaSo(e.target.value)} />
+              <input type="text" className="form-control" placeholder="VD: 32F.7100001.001" value={searchMaSo} onChange={e => setSearchMaSo(e.target.value)} />
             </div>
             <div style={{ minWidth: 240, flex: '2 1 240px' }}>
               <label className="form-label">Tên ấn phẩm</label>

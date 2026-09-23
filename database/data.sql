@@ -66,53 +66,53 @@ ON DUPLICATE KEY UPDATE name = VALUES(name);
 -- Sử dụng categories thay vì product_groups / units
 -- ============================================================
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'VPP-001', 'Giấy A4 Double A',
+SELECT '32F.7100001.001', 'Giấy A4 Double A',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'VPP'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'REAM'),
        90000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'VPP-001');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.7100001.001');
 
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'VPP-002', 'Bút bi Thiên Long TL-027',
+SELECT '32F.7100001.002', 'Bút bi Thiên Long TL-027',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'VPP'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'CAY'),
        5000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'VPP-002');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.7100001.002');
 
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'VPP-003', 'Băng dính trong 2cm',
+SELECT '32F.7100001.003', 'Băng dính trong 2cm',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'VPP'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'CUON'),
        8000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'VPP-003');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.7100001.003');
 
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'ACTT-001', 'Máy tính Casio FX-580VNX',
+SELECT '32F.9020100.001', 'Máy tính Casio FX-580VNX',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'ACTT'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'CAI'),
        350000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'ACTT-001');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.9020100.001');
 
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'ACTT-002', 'Sổ tay kẻ ngang A5',
+SELECT '32F.9020100.002', 'Sổ tay kẻ ngang A5',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'ACTT'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'QUYEN'),
        25000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'ACTT-002');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.9020100.002');
 
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'VLK-001', 'Vật liệu lót sàn kho',
+SELECT '32F.9080117.001', 'Vật liệu lót sàn kho',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'VLK'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'CAI'),
        150000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'VLK-001');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.9080117.001');
 
 INSERT INTO products (ma_so, ten_hang, product_group_id, unit_id, don_gia_nhap, trang_thai, created_by)
-SELECT 'ACQT-001', 'Tài liệu quản trị mật',
+SELECT '32F.5010000.001', 'Tài liệu quản trị mật',
        (SELECT id FROM categories WHERE type = 'PRODUCT_GROUP' AND code = 'ACQT'),
        (SELECT id FROM categories WHERE type = 'UNIT' AND code = 'BO'),
        500000, 'HOAT_DONG', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = 'ACQT-001');
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE ma_so = '32F.5010000.001');
 
 -- ============================================================
 -- 6. INVENTORY — Tồn ban đầu = 0 cho tất cả sản phẩm

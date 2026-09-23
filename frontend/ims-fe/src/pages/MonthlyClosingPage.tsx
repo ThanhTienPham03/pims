@@ -191,7 +191,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                   <label className="fw-semibold text-secondary" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Tháng</label>
                   <select
                     className="form-select form-select-sm shadow-none"
-                    style={{ width: 120, borderColor: '#dee2e6', borderRadius: 8 }}
+                    style={{ width: 130, borderColor: '#dee2e6', borderRadius: 8 }}
                     value={selectedMonth}
                     onChange={e => setSelectedMonth(Number(e.target.value))}
                   >
@@ -205,7 +205,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                   <label className="fw-semibold text-secondary" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Năm</label>
                   <select
                     className="form-select form-select-sm shadow-none"
-                    style={{ width: 100, borderColor: '#dee2e6', borderRadius: 8 }}
+                    style={{ width: 130, borderColor: '#dee2e6', borderRadius: 8 }}
                     value={selectedYear}
                     onChange={e => setSelectedYear(Number(e.target.value))}
                   >

@@ -40,6 +40,7 @@ public class DataInitializer implements CommandLineRunner {
     private final InventoryRepository inventoryRepository;
     private final KktsRepository kktsRepository;
     private final PasswordEncoder passwordEncoder;
+    private final saigonbank.fit.ims.service.ProductService productService;
 
     @Override
     @Transactional
@@ -50,6 +51,7 @@ public class DataInitializer implements CommandLineRunner {
         Map<String, ProductGroup> groups = seedProductGroups();
         Map<String, Unit> units = seedUnits();
         seedProducts(groups, units);
+        productService.migrateAllLegacyProductCodes();
         log.info("Database seeding completed.");
     }
 
@@ -154,25 +156,25 @@ public class DataInitializer implements CommandLineRunner {
             Unit unitQuyen = units.get("QUYEN");
             Unit unitCuon = units.get("CUON");
 
-            createProductWithInventory("VPP-001", "Bút bi Thiên Long 0.5mm xanh", grpVpp, unitCai,
+            createProductWithInventory("32F.7100001.001", "Bút bi Thiên Long 0.5mm xanh", grpVpp, unitCai,
                     new BigDecimal("5000"), new BigDecimal("100"), new BigDecimal("500000"));
 
-            createProductWithInventory("VPP-002", "Giấy in A4 Double A 70gsm", grpVpp, unitReam,
+            createProductWithInventory("32F.7100001.002", "Giấy in A4 Double A 70gsm", grpVpp, unitReam,
                     new BigDecimal("75000"), new BigDecimal("50"), new BigDecimal("3750000"));
 
-            createProductWithInventory("ACTT-001", "Phiếu thu 2 liên A5 (100 tờ/quyển)", grpActt, unitQuyen,
+            createProductWithInventory("32F.9020100.001", "Phiếu thu 2 liên A5 (100 tờ/quyển)", grpActt, unitQuyen,
                     new BigDecimal("25000"), new BigDecimal("30"), new BigDecimal("750000"));
 
-            createProductWithInventory("ACTT-002", "Phiếu chi 2 liên A5 (100 tờ/quyển)", grpActt, unitQuyen,
+            createProductWithInventory("32F.9020100.002", "Phiếu chi 2 liên A5 (100 tờ/quyển)", grpActt, unitQuyen,
                     new BigDecimal("25000"), new BigDecimal("30"), new BigDecimal("750000"));
 
-            createProductWithInventory("ACQT-001", "Sổ séc trắng 50 tờ (In đặc biệt)", grpAcqt, unitQuyen,
+            createProductWithInventory("32F.5010000.001", "Sổ séc trắng 50 tờ (In đặc biệt)", grpAcqt, unitQuyen,
                     new BigDecimal("150000"), new BigDecimal("20"), new BigDecimal("3000000"));
 
-            createProductWithInventory("VLK-001", "Băng keo trong 5cm 100 yard", grpVlk, unitCuon,
+            createProductWithInventory("32F.9080117.001", "Băng keo trong 5cm 100 yard", grpVlk, unitCuon,
                     new BigDecimal("15000"), new BigDecimal("40"), new BigDecimal("600000"));
 
-            log.info("Seeded sample products and inventory records.");
+            log.info("Seeded sample products and inventory records with standardized codes.");
         }
     }
 

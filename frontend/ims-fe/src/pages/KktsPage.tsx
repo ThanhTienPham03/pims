@@ -104,7 +104,7 @@ export const KktsPage: React.FC<KktsPageProps> = ({ showToast }) => {
             <div className="d-flex align-items-center gap-2">
               <select
                 className="form-select form-select-sm shadow-none"
-                style={{ width: '100px' }}
+                style={{ width: '130px' }}
                 value={selectedYear}
                 onChange={e => setSelectedYear(Number(e.target.value))}
               >

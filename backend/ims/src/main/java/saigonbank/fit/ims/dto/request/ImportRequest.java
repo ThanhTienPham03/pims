@@ -5,11 +5,14 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
 
 @Data
-public class ImportRequest {
+public class ImportRequest implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @NotNull(message = "Ngày nhập là bắt buộc")
     private LocalDate ngayNhap;

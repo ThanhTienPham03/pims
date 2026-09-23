@@ -112,7 +112,7 @@ camunda:
       schema-update: true
     history-level: full
     auto-deployment-enabled: true
-    deployment-resource-pattern: classpath*:demo-process.bpmn,classpath*:bpmn/*.bpmn
+    deployment-resource-pattern: classpath*:demo-process.bpmn,classpath*:bpmn/*.bpmn,classpath*:dmn/*.dmn
     generic-properties:
       properties:
         skipIsolationLevelCheck: true

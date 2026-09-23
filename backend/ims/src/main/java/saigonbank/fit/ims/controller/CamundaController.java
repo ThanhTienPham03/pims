@@ -30,6 +30,9 @@ public class CamundaController {
     @Autowired
     private saigonbank.fit.ims.service.CamundaWorkflowService camundaWorkflowService;
 
+    @Autowired
+    private saigonbank.fit.ims.service.CamundaDmnService camundaDmnService;
+
     @GetMapping("/processes")
     public ResponseEntity<?> listProcesses() {
         return ResponseEntity.ok(
@@ -38,10 +41,8 @@ public class CamundaController {
                                 "id", pd.getId(),
                                 "key", pd.getKey(),
                                 "name", pd.getName() != null ? pd.getName() : pd.getKey(),
-                                "version", pd.getVersion()
-                        ))
-                        .toList()
-        );
+                                "version", pd.getVersion()))
+                        .toList());
     }
 
     @PostMapping("/deploy")
@@ -50,18 +51,31 @@ public class CamundaController {
             Deployment deployment = repositoryService.createDeployment()
                     .name("IMS-Standard-Processes")
                     .addClasspathResource("demo-process.bpmn")
-                    .addClasspathResource("bpmn/BPMN-TongQuanQuyTrinh.bpmn")
                     .addClasspathResource("bpmn/process_xuat_an_pham.bpmn")
                     .addClasspathResource("bpmn/process_nhap_an_pham.bpmn")
                     .addClasspathResource("bpmn/process_chot_so.bpmn")
                     .addClasspathResource("bpmn/process_quan_ly_danh_muc_an_pham.bpmn")
+                    .addClasspathResource("dmn/decision_phe_duyet_xuat.dmn")
                     .enableDuplicateFiltering(true)
                     .deploy();
 
-            return ResponseEntity.ok("Đã deploy thành công quy trình lên Camunda 7! Deployment ID: " + deployment.getId());
+            return ResponseEntity.ok(
+                    "Đã deploy thành công quy trình & bảng DMN lên Camunda 7! Deployment ID: " + deployment.getId());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi khi deploy: " + e.getMessage());
         }
+    }
+
+    // ==========================================
+    // 0. CAMUNDA DMN EVALUATION (BẢNG QUYẾT ĐỊNH)
+    // ==========================================
+    @PostMapping("/decision/export-approval")
+    public ResponseEntity<?> evaluateExportApprovalDecision(
+            @RequestParam(defaultValue = "VPP") String nhomHang,
+            @RequestParam(defaultValue = "15000000") java.math.BigDecimal tongTien,
+            @RequestParam(required = false, defaultValue = "Xuất sử dụng") String lyDoXuat) {
+        var result = camundaDmnService.evaluateExportApproval(nhomHang, tongTien, lyDoXuat);
+        return ResponseEntity.ok(result);
     }
 
     // ==========================================
@@ -72,8 +86,7 @@ public class CamundaController {
             @RequestParam(defaultValue = "100000000") Double tongTien,
             @RequestParam(defaultValue = "true") Boolean canPheDuyet,
             @RequestParam(defaultValue = "Xuất ấn phẩm mẫu") String lyDoXuat,
-            @RequestParam(required = false) String businessKey
-    ) {
+            @RequestParam(required = false) String businessKey) {
         try {
             String bKey = businessKey != null ? businessKey : "EXP-" + System.currentTimeMillis();
             Map<String, Object> vars = new HashMap<>();
@@ -87,8 +100,7 @@ public class CamundaController {
                     "status", "SUCCESS",
                     "message", "Đã khởi chạy Quy trình Xuất ấn phẩm thành công!",
                     "processInstanceId", pi.getId(),
-                    "businessKey", bKey
-            ));
+                    "businessKey", bKey));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
@@ -100,8 +112,7 @@ public class CamundaController {
     @PostMapping("/import/start")
     public ResponseEntity<?> startImportProcess(
             @RequestParam(defaultValue = "Nhập ấn phẩm đợt mới") String lyDoNhap,
-            @RequestParam(required = false) String businessKey
-    ) {
+            @RequestParam(required = false) String businessKey) {
         try {
             String bKey = businessKey != null ? businessKey : "IMP-" + System.currentTimeMillis();
             Map<String, Object> vars = new HashMap<>();
@@ -113,8 +124,7 @@ public class CamundaController {
                     "status", "SUCCESS",
                     "message", "Đã khởi chạy Quy trình Nhập ấn phẩm thành công!",
                     "processInstanceId", pi.getId(),
-                    "businessKey", bKey
-            ));
+                    "businessKey", bKey));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
@@ -126,8 +136,7 @@ public class CamundaController {
     @PostMapping("/closing/start")
     public ResponseEntity<?> startClosingProcess(
             @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month
-    ) {
+            @RequestParam(required = false) Integer month) {
         try {
             int y = year != null ? year : java.time.LocalDate.now().getYear();
             int m = month != null ? month : java.time.LocalDate.now().getMonthValue();
@@ -143,8 +152,7 @@ public class CamundaController {
                     "status", "SUCCESS",
                     "message", "Đã khởi chạy Quy trình Chốt sổ Tháng " + m + "/" + y + " thành công!",
                     "processInstanceId", pi.getId(),
-                    "businessKey", bKey
-            ));
+                    "businessKey", bKey));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
@@ -154,18 +162,6 @@ public class CamundaController {
     // 4. QUY TRÌNH QUẢN LÝ DANH MỤC ẤN PHẨM
     // ==========================================
 
-    /**
-     * Khởi chạy quy trình Quản lý Danh mục Ấn phẩm thủ công (dùng để test).
-     * <p>
-     * Trong thực tế, quy trình này được tự động gọi từ ProductController (các endpoint /workflow).
-     *
-     * @param loaiThaoTac TAO_MOI | CAP_NHAT | XOA_NGUNG
-     * @param maSo        Mã hàng (bắt buộc khi TAO_MOI; hoặc kết hợp productId khi CAP_NHAT/XOA_NGUNG)
-     * @param tenHang     Tên hàng
-     * @param nhomHang    Nhóm hàng (VPP / ACTT / ACQT / VLK)
-     * @param donViTinh   Đơn vị tính
-     * @param productId   ID sản phẩm (cần thiết cho CAP_NHAT và XOA_NGUNG)
-     */
     @PostMapping("/catalog/start")
     public ResponseEntity<?> startCatalogProcess(
             @RequestParam(defaultValue = "TAO_MOI") String loaiThaoTac,
@@ -173,15 +169,19 @@ public class CamundaController {
             @RequestParam(required = false) String tenHang,
             @RequestParam(required = false, defaultValue = "VPP") String nhomHang,
             @RequestParam(required = false, defaultValue = "Cái") String donViTinh,
-            @RequestParam(required = false) Long productId
-    ) {
+            @RequestParam(required = false) Long productId) {
         try {
             Map<String, Object> vars = new HashMap<>();
-            if (maSo     != null) vars.put("maSo",      maSo);
-            if (tenHang  != null) vars.put("tenHang",   tenHang);
-            if (nhomHang != null) vars.put("nhomHang",  nhomHang);
-            if (donViTinh != null) vars.put("donViTinh", donViTinh);
-            if (productId != null) vars.put("productId", productId);
+            if (maSo != null)
+                vars.put("maSo", maSo);
+            if (tenHang != null)
+                vars.put("tenHang", tenHang);
+            if (nhomHang != null)
+                vars.put("nhomHang", nhomHang);
+            if (donViTinh != null)
+                vars.put("donViTinh", donViTinh);
+            if (productId != null)
+                vars.put("productId", productId);
             vars.put("donGiaNhap", java.math.BigDecimal.ZERO);
 
             String instanceId = camundaWorkflowService.startCatalogWorkflow(loaiThaoTac, vars, "admin");
@@ -189,16 +189,13 @@ public class CamundaController {
                     "status", "SUCCESS",
                     "message", "Đã khởi chạy Quy trình Quản lý Danh mục Ấn phẩm!",
                     "loaiThaoTac", loaiThaoTac,
-                    "processInstanceId", instanceId != null ? instanceId : "N/A"
-            ));
+                    "processInstanceId", instanceId != null ? instanceId : "N/A"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of(
                     "status", "ERROR",
-                    "error", e.getMessage()
-            ));
+                    "error", e.getMessage()));
         }
     }
-
 
     // ==========================================
     // 4. QUẢN LÝ USER TASK (DANH SÁCH & PHÊ DUYỆT)
@@ -229,16 +226,14 @@ public class CamundaController {
     @PostMapping("/tasks/{taskId}/complete")
     public ResponseEntity<?> completeTask(
             @PathVariable String taskId,
-            @RequestBody(required = false) Map<String, Object> variables
-    ) {
+            @RequestBody(required = false) Map<String, Object> variables) {
         try {
             Map<String, Object> vars = variables != null ? variables : Map.of();
             camundaWorkflowService.completeUserTask(taskId, vars);
             return ResponseEntity.ok(Map.of(
                     "status", "SUCCESS",
                     "message", "Đã hoàn thành Task " + taskId + " thành công!",
-                    "variablesSubmitted", vars
-            ));
+                    "variablesSubmitted", vars));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
@@ -250,48 +245,12 @@ public class CamundaController {
         try {
             ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
                     "DemoProcess",
-                    Map.of("message", message)
-            );
+                    Map.of("message", message));
             return ResponseEntity.ok(
                     "Đã khởi tạo DemoProcess thành công! Process Instance ID: " + processInstance.getId()
-                    + " (Business Key: " + processInstance.getBusinessKey() + ")");
+                            + " (Business Key: " + processInstance.getBusinessKey() + ")");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi khi khởi chạy DemoProcess: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/start-tong-quan")
-    public ResponseEntity<String> startTongQuanProcess(
-            @RequestParam(defaultValue = "NHAP") String yeuCau,
-            @RequestParam(defaultValue = "false") boolean isDuplicateMaSo,
-            @RequestParam(defaultValue = "true") boolean masterValid,
-            @RequestParam(defaultValue = "true") boolean importHeaderValid,
-            @RequestParam(defaultValue = "true") boolean exportHeaderValid,
-            @RequestParam(defaultValue = "true") boolean acqtValid,
-            @RequestParam(defaultValue = "true") boolean acceptDuplicateName
-    ) {
-        try {
-            Map<String, Object> vars = new HashMap<>();
-            vars.put("yeuCau", yeuCau);
-            vars.put("isDuplicateMaSo", isDuplicateMaSo);
-            vars.put("isDuplicateName", false);
-            vars.put("masterValid", masterValid);
-            vars.put("importHeaderValid", importHeaderValid);
-            vars.put("exportHeaderValid", exportHeaderValid);
-            vars.put("acqtValid", acqtValid);
-            vars.put("acceptDuplicateName", acceptDuplicateName);
-            vars.put("items", java.util.Collections.emptyList());
-
-            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
-                    "Process_0pajq63",
-                    vars
-            );
-
-            return ResponseEntity.ok(
-                    "Đã khởi tạo quy trình Tổng Quan thành công! Process Instance ID: " + processInstance.getId()
-                    + " (Nghiệp vụ: " + yeuCau + ")");
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Lỗi khi khởi chạy quy trình Tổng Quan: " + e.getMessage());
         }
     }
 }

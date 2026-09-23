@@ -284,6 +284,7 @@ export interface DashboardData {
 export interface AuditLogItem {
   id: number;
   username: string;
+  fullName?: string;
   action: string;
   entityName: string | null;
   entityId: string | null;

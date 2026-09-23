@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class AuditLogResponse {
     private Long id;
     private String username;
+    private String fullName;
     private String action;
     private String entityName;
     private String entityId;

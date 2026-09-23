@@ -8,6 +8,21 @@ interface ProductsPageProps {
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
+const PRODUCT_PREFIX_MAP: Record<string, string> = {
+  ACTT: '32F.9020100.',
+  VPP: '32F.7100001.',
+  ACQT: '32F.5010000.',
+  VLK: '32F.9080117.',
+};
+
+const getProductPrefix = (nhomHang: string): string => {
+  const upper = (nhomHang || '').trim().toUpperCase();
+  if (upper.startsWith('32F.')) {
+    return upper.endsWith('.') ? upper : `${upper}.`;
+  }
+  return PRODUCT_PREFIX_MAP[upper] || `${upper}.`;
+};
+
 export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [groups, setGroups] = useState<ProductGroup[]>([]);
@@ -30,6 +45,23 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
   const [newDonGiaNhap, setNewDonGiaNhap] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [nameWarning, setNameWarning] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
+
+  const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('ROLE_ADMIN');
+  const hasLegacyCodes = products.some((p) => p.maSo && !p.maSo.startsWith('32F.'));
+
+  const handleMigrateCodes = async () => {
+    try {
+      setMigrating(true);
+      const res = await productService.migrateCodes();
+      showToast(res?.message || 'Đã chuẩn hóa toàn bộ mã hàng!', 'success');
+      loadProducts();
+    } catch (err: any) {
+      showToast('Lỗi khi chuẩn hóa mã: ' + err.message, 'error');
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const handleOpenCreateModal = () => {
     const defaultGroup = newNhomHang || (groups.length > 0 ? groups[0].code : 'VPP');
@@ -40,51 +72,48 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
     setIsModalOpen(true);
   };
 
-  const isAdmin = userRoles.includes('ADMIN');
-
   const loadProducts = async () => {
     try {
       setLoading(true);
       const res = await productService.getProducts({
-        maSo: searchMaSo,
-        tenHang: searchTenHang,
-        nhomHang: selectedGroup,
-        trangThai: selectedStatus,
         page: currentPage,
-        size: 15,
+        size: 10,
+        maSo: searchMaSo || undefined,
+        tenHang: searchTenHang || undefined,
+        nhomHang: selectedGroup || undefined,
+        trangThai: selectedStatus || undefined,
       });
       setProducts(res.content || []);
       setTotalPages(res.totalPages || 1);
       setTotalElements(res.totalElements || 0);
     } catch (err: any) {
-      showToast('Lỗi tải danh mục sản phẩm: ' + err.message, 'error');
+      showToast('Không thể tải danh sách sản phẩm: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const fetchMetadata = async () => {
-      try {
-        const [gRes, uRes] = await Promise.all([
-          productService.getGroups().catch(() => []),
-          productService.getUnits().catch(() => []),
-        ]);
-        setGroups(gRes);
-        setUnits(uRes);
-        if (gRes.length > 0) setNewNhomHang(gRes[0].code);
-        if (uRes.length > 0) setNewDonViTinh(uRes[0].name);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchMetadata();
-  }, []);
+    loadProducts();
+  }, [currentPage, selectedGroup, selectedStatus]);
 
   useEffect(() => {
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, selectedGroup, selectedStatus]);
+    const loadLookups = async () => {
+      try {
+        const [gList, uList] = await Promise.all([
+          productService.getGroups(),
+          productService.getUnits(),
+        ]);
+        setGroups(gList);
+        setUnits(uList);
+        if (gList.length > 0) setNewNhomHang(gList[0].code);
+        if (uList.length > 0) setNewDonViTinh(uList[0].name);
+      } catch (err: any) {
+        showToast('Lỗi tải dữ liệu tra cứu: ' + err.message, 'warning');
+      }
+    };
+    loadLookups();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +131,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
     try {
       setSubmitting(true);
 
-      // Tự động sinh mã hàng hóa theo quy chuẩn: <NHÓM_HÀNG>-<STT 3 CHỮ SỐ>
+      // Tự động sinh mã hàng hóa theo quy chuẩn:
+      // ACTT: 32F.9020100.STT | VPP: 32F.7100001.STT | ACQT: 32F.5010000.STT | VLK: 32F.9080117.STT
       let generatedMaSo = '';
       try {
         const nextCodeRes = await productService.getNextCode(newNhomHang);
@@ -110,30 +140,30 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
           generatedMaSo = nextCodeRes.maSo;
         }
       } catch {
-        // Fallback nếu backend đang chạy phiên bản trước chưa có endpoint /next-code
+        // Fallback nếu backend chưa phản hồi
       }
 
       if (!generatedMaSo) {
         try {
           const prodsRes = await productService.getProducts({ nhomHang: newNhomHang, size: 500 });
           const items = prodsRes?.content || [];
-          const prefix = newNhomHang.trim().toUpperCase();
+          const prefix = getProductPrefix(newNhomHang);
           let maxSeq = 0;
           for (const item of items) {
             if (!item.maSo) continue;
             const code = item.maSo.trim().toUpperCase();
-            if (code.startsWith(prefix)) {
-              const remainder = code.slice(prefix.length).replace(/^[^0-9]+/, '');
-              const match = remainder.match(/\d+/);
+            if (code.startsWith(prefix.toUpperCase())) {
+              const remainder = code.slice(prefix.length);
+              const match = remainder.match(/(\d+)$/);
               if (match) {
-                const num = parseInt(match[0], 10);
+                const num = parseInt(match[1], 10);
                 if (num > maxSeq) maxSeq = num;
               }
             }
           }
-          generatedMaSo = `${prefix}-${String(maxSeq + 1).padStart(3, '0')}`;
+          generatedMaSo = `${prefix}${String(maxSeq + 1).padStart(3, '0')}`;
         } catch {
-          generatedMaSo = `${newNhomHang.trim().toUpperCase()}-001`;
+          generatedMaSo = `${getProductPrefix(newNhomHang)}001`;
         }
       }
 
@@ -206,13 +236,37 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
         </div>
       </div>
 
+      {/* Banner cảnh báo nếu còn mã hàng cũ */}
+      {hasLegacyCodes && (
+        <div className="alert alert-warning border-warning shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 py-3 px-4 rounded-3" role="alert">
+          <div className="d-flex align-items-center gap-3">
+            <i className="bi bi-exclamation-triangle-fill text-warning fs-3" aria-hidden="true" />
+            <div>
+              <strong className="fs-6 text-dark">Phát hiện mã hàng cũ chưa theo chuẩn mới (32F.xxxxxxx.STT)</strong>
+              <div className="text-muted small mt-1">
+                Các mã như <code>ACQT-002</code>, <code>VPP-003</code>,... cần được chuyển sang chuẩn tài khoản kế toán Saigonbank. Bạn có thể nhấn nút để hệ thống tự động cập nhật ngay.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-warning fw-semibold px-4 py-2 rounded-pill shadow-sm d-flex align-items-center gap-2"
+            onClick={handleMigrateCodes}
+            disabled={migrating}
+          >
+            <i className={`bi ${migrating ? 'bi-arrow-repeat spin' : 'bi-magic'}`} aria-hidden="true" />
+            {migrating ? 'Đang chuẩn hóa...' : 'Chuẩn hóa toàn bộ mã 32F'}
+          </button>
+        </div>
+      )}
+
       {/* Filter Bar */}
       <div className="card mb-4">
         <div className="card-body">
           <form onSubmit={handleSearch} className="d-flex gap-3 flex-wrap align-items-end">
             <div style={{ minWidth: 160, flex: '1 1 160px' }}>
               <label className="form-label">Mã số hàng</label>
-              <input type="text" className="form-control" placeholder="VD: ACQT001" value={searchMaSo} onChange={e => setSearchMaSo(e.target.value)} />
+              <input type="text" className="form-control" placeholder="VD: 32F.7100001.001" value={searchMaSo} onChange={e => setSearchMaSo(e.target.value)} />
             </div>
             <div style={{ minWidth: 240, flex: '2 1 240px' }}>
               <label className="form-label">Tên hàng hóa</label>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { auditLogService, activitySocket } from '../services';
+import { auditLogService, activitySocket, userService } from '../services';
 import type { AuditLogItem } from '../types';
 
 interface ActivityPageProps {
@@ -8,54 +8,65 @@ interface ActivityPageProps {
 }
 
 const ACTION_CONFIG: Record<string, { label: string; icon: string; badgeClass: string }> = {
-  CREATE:       { label: 'Tạo mới',     icon: 'bi-plus-circle-fill',    badgeClass: 'badge-action-create'    },
-  CANCEL:       { label: 'Hủy bỏ',      icon: 'bi-x-circle-fill',        badgeClass: 'badge-action-cancel'    },
-  UPDATE:       { label: 'Cập nhật',    icon: 'bi-pencil-fill',          badgeClass: 'badge-action-update'    },
-  DELETE:       { label: 'Xóa',         icon: 'bi-trash-fill',           badgeClass: 'badge-action-delete'    },
-  DEACTIVATE:   { label: 'Ngưng SD',    icon: 'bi-slash-circle-fill',    badgeClass: 'badge-action-deactivate'},
-  LOGIN:        { label: 'Đăng nhập',   icon: 'bi-box-arrow-in-right',   badgeClass: 'badge-action-login'     },
-  LOCK_MONTH:   { label: 'Khóa sổ',    icon: 'bi-lock-fill',            badgeClass: 'badge-action-lock'      },
-  UNLOCK_MONTH: { label: 'Mở khóa',    icon: 'bi-unlock-fill',          badgeClass: 'badge-action-unlock'    },
+  CREATE: { label: 'Tạo mới', icon: 'bi-plus-circle-fill', badgeClass: 'badge-action-create' },
+  CANCEL: { label: 'Hủy bỏ', icon: 'bi-x-circle-fill', badgeClass: 'badge-action-cancel' },
+  UPDATE: { label: 'Cập nhật', icon: 'bi-pencil-fill', badgeClass: 'badge-action-update' },
+  DELETE: { label: 'Xóa', icon: 'bi-trash3-fill', badgeClass: 'badge-action-delete' },
+  DEACTIVATE: { label: 'Ngưng SD', icon: 'bi-slash-circle-fill', badgeClass: 'badge-action-deactivate' },
+  LOGIN: { label: 'Đăng nhập', icon: 'bi-box-arrow-in-right', badgeClass: 'badge-action-login' },
+  LOCK_MONTH: { label: 'Khóa sổ', icon: 'bi-lock-fill', badgeClass: 'badge-action-lock' },
+  UNLOCK_MONTH: { label: 'Mở khóa', icon: 'bi-unlock-fill', badgeClass: 'badge-action-unlock' },
 };
 
-const ENTITY_LABEL: Record<string, string> = {
-  IMPORT:          'Phiếu nhập',
-  EXPORT:          'Phiếu xuất',
-  PRODUCT:         'Mã hàng',
-  USER:            'Tài khoản',
-  MONTHLY_CLOSING: 'Kỳ kế toán',
+const ENTITY_CONFIG: Record<string, { label: string; icon: string }> = {
+  IMPORT: { label: 'Phiếu nhập', icon: 'bi-box-arrow-in-down' },
+  EXPORT: { label: 'Phiếu xuất', icon: 'bi-box-arrow-up-right' },
+  PRODUCT: { label: 'Mã hàng', icon: 'bi-box-seam' },
+  USER: { label: 'Tài khoản', icon: 'bi-person-badge' },
+  MONTHLY_CLOSING: { label: 'Kỳ kế toán', icon: 'bi-calendar-check' },
 };
 
 const ACTION_OPTIONS = [
   { value: '', label: 'Tất cả hành động' },
-  { value: 'CREATE',       label: 'Tạo mới' },
-  { value: 'CANCEL',       label: 'Hủy bỏ' },
-  { value: 'UPDATE',       label: 'Cập nhật' },
-  { value: 'DELETE',       label: 'Xóa' },
-  { value: 'DEACTIVATE',   label: 'Ngưng sử dụng' },
-  { value: 'LOGIN',        label: 'Đăng nhập' },
-  { value: 'LOCK_MONTH',   label: 'Khóa sổ' },
+  { value: 'CREATE', label: 'Tạo mới' },
+  { value: 'CANCEL', label: 'Hủy bỏ' },
+  { value: 'UPDATE', label: 'Cập nhật' },
+  { value: 'DELETE', label: 'Xóa' },
+  { value: 'DEACTIVATE', label: 'Ngưng sử dụng' },
+  { value: 'LOGIN', label: 'Đăng nhập' },
+  { value: 'LOCK_MONTH', label: 'Khóa sổ' },
   { value: 'UNLOCK_MONTH', label: 'Mở khóa sổ' },
 ];
 
 const ENTITY_OPTIONS = [
   { value: '', label: 'Tất cả đối tượng' },
-  { value: 'IMPORT',          label: 'Phiếu nhập' },
-  { value: 'EXPORT',          label: 'Phiếu xuất' },
-  { value: 'PRODUCT',         label: 'Mã hàng' },
-  { value: 'USER',            label: 'Tài khoản' },
+  { value: 'IMPORT', label: 'Phiếu nhập' },
+  { value: 'EXPORT', label: 'Phiếu xuất' },
+  { value: 'PRODUCT', label: 'Mã hàng' },
+  { value: 'USER', label: 'Tài khoản' },
   { value: 'MONTHLY_CLOSING', label: 'Kỳ kế toán' },
 ];
 
-const formatDateTime = (iso: string) => {
+const formatDateTimeParts = (iso: string) => {
   try {
-    return new Date(iso).toLocaleString('vi-VN', {
+    const d = new Date(iso);
+    const dateStr = d.toLocaleDateString('vi-VN', {
       day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+    const timeStr = d.toLocaleTimeString('vi-VN', {
       hour: '2-digit', minute: '2-digit', second: '2-digit',
     });
+    return { dateStr, timeStr };
   } catch {
-    return iso;
+    return { dateStr: iso, timeStr: '' };
   }
+};
+
+const getInitial = (name: string) => {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  const target = parts[parts.length - 1];
+  return target.charAt(0).toUpperCase();
 };
 
 const AccessDenied = () => (
@@ -74,6 +85,7 @@ export const ActivityPage: React.FC<ActivityPageProps> = ({ userRoles, showToast
   const isAdmin = userRoles.includes('ADMIN');
 
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
+  const [userMap, setUserMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -103,7 +115,10 @@ export const ActivityPage: React.FC<ActivityPageProps> = ({ userRoles, showToast
         page,
         size: 20,
       });
-      setLogs(res.content || []);
+      const validContent = (res.content || []).filter(
+        (item) => !item.action?.startsWith('CAMUNDA') && !item.description?.toLowerCase().includes('camunda')
+      );
+      setLogs(validContent);
       setTotalPages(res.totalPages || 1);
       setTotalElements(res.totalElements || 0);
       setCurrentPage(page);
@@ -121,10 +136,29 @@ export const ActivityPage: React.FC<ActivityPageProps> = ({ userRoles, showToast
 
   useEffect(() => {
     if (!isAdmin) return;
+    userService.getUsers({ size: 100 }).then(res => {
+      if (res && res.content) {
+        const map: Record<string, string> = {};
+        res.content.forEach(u => {
+          if (u.username && u.fullName) {
+            map[u.username] = u.fullName;
+          }
+        });
+        setUserMap(map);
+      }
+    }).catch(() => { });
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
 
     activitySocket.connect();
 
     const unsubMsg = activitySocket.subscribe((newLog) => {
+      if (newLog.action?.startsWith('CAMUNDA') || newLog.description?.toLowerCase().includes('camunda')) {
+        return;
+      }
+
       const { filterUsername: fUser, filterAction: fAct, filterEntity: fEnt, currentPage: cPage } = filterRef.current;
 
       if (cPage === 0) {
@@ -259,11 +293,11 @@ export const ActivityPage: React.FC<ActivityPageProps> = ({ userRoles, showToast
         </div>
       </div>
 
-      <div className="card shadow-sm">
+      <div className="card shadow-sm border-0">
         <div className="card-body p-0">
           {loading ? (
             <div className="text-center py-5 text-muted">
-              <div className="spinner-border spinner-border-sm me-2" role="status" />
+              <div className="spinner-border spinner-border-sm text-primary me-2" role="status" />
               Đang tải lịch sử...
             </div>
           ) : logs.length === 0 ? (
@@ -274,14 +308,14 @@ export const ActivityPage: React.FC<ActivityPageProps> = ({ userRoles, showToast
           ) : (
             <div className="table-responsive">
               <table className="table table-hover mb-0 align-middle">
-                <thead>
+                <thead style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
                   <tr>
-                    <th style={{ width: 160 }}>Thời gian</th>
-                    <th style={{ width: 120 }}>Người dùng</th>
-                    <th style={{ width: 120 }}>Hành động</th>
-                    <th style={{ width: 120 }}>Đối tượng</th>
-                    <th style={{ width: 130 }}>Mã / Số phiếu</th>
-                    <th>Mô tả chi tiết</th>
+                    <th className="py-3 px-3 text-secondary text-uppercase fw-semibold" style={{ width: 140, fontSize: '0.75rem', letterSpacing: '0.04em' }}>Thời gian</th>
+                    <th className="py-3 px-3 text-secondary text-uppercase fw-semibold" style={{ width: 180, fontSize: '0.75rem', letterSpacing: '0.04em' }}>Người dùng</th>
+                    <th className="py-3 px-3 text-secondary text-uppercase fw-semibold" style={{ width: 130, fontSize: '0.75rem', letterSpacing: '0.04em' }}>Hành động</th>
+                    <th className="py-3 px-3 text-secondary text-uppercase fw-semibold" style={{ width: 135, fontSize: '0.75rem', letterSpacing: '0.04em' }}>Đối tượng</th>
+                    <th className="py-3 px-3 text-secondary text-uppercase fw-semibold" style={{ width: 145, fontSize: '0.75rem', letterSpacing: '0.04em' }}>Mã / Số phiếu</th>
+                    <th className="py-3 px-3 text-secondary text-uppercase fw-semibold" style={{ fontSize: '0.75rem', letterSpacing: '0.04em' }}>Mô tả chi tiết</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -289,35 +323,65 @@ export const ActivityPage: React.FC<ActivityPageProps> = ({ userRoles, showToast
                     const cfg = ACTION_CONFIG[log.action] ?? {
                       label: log.action, icon: 'bi-circle', badgeClass: 'badge-action-default',
                     };
+                    const ent = ENTITY_CONFIG[log.entityName ?? ''];
                     const isRecent = recentLogIds.includes(log.id);
+                    const { dateStr, timeStr } = log.createdAt ? formatDateTimeParts(log.createdAt) : { dateStr: '—', timeStr: '' };
+                    const displayName = log.fullName || userMap[log.username] || (log.username === 'admin' ? 'Quản trị viên' : log.username);
+                    const userInitial = getInitial(displayName);
+
                     return (
                       <tr key={log.id} className={isRecent ? 'row-highlight-new' : undefined}>
-                        <td>
-                          <span className="text-secondary text-nowrap" style={{ fontSize: '0.8rem' }}>
-                            {log.createdAt ? formatDateTime(log.createdAt) : '—'}
-                          </span>
+                        <td className="px-3 py-2">
+                          <div className="d-flex flex-column">
+                            <span className="fw-semibold text-dark font-monospace" style={{ fontSize: '0.825rem' }}>
+                              {timeStr || dateStr}
+                            </span>
+                            {timeStr && (
+                              <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                <i className="bi bi-calendar3 me-1 opacity-75" />{dateStr}
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td>
-                          <span className="fw-semibold" style={{ fontSize: '0.875rem' }}>
-                            <i className="bi bi-person-circle me-1 text-muted" />
-                            {log.username}
-                          </span>
+                        <td className="px-3 py-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="log-user-avatar" title={`${displayName} (@${log.username})`}>
+                              {userInitial}
+                            </span>
+                            <div className="d-flex flex-column" style={{ minWidth: 0 }}>
+                              <span className="fw-semibold text-dark text-truncate" style={{ fontSize: '0.85rem', maxWidth: 150 }} title={`${displayName} (@${log.username})`}>
+                                {displayName}
+                              </span>
+                              {displayName !== log.username && (
+                                <span className="text-muted text-truncate" style={{ fontSize: '0.72rem', maxWidth: 150 }}>
+                                  @{log.username}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </td>
-                        <td>
-                          <span className={`badge d-inline-flex align-items-center gap-1 py-1 px-2 ${cfg.badgeClass}`}>
+                        <td className="px-3 py-2">
+                          <span className={`badge-action ${cfg.badgeClass}`}>
                             <i className={`bi ${cfg.icon}`} />
                             {cfg.label}
                           </span>
                         </td>
-                        <td>
-                          <span className="badge badge-group">
-                            {ENTITY_LABEL[log.entityName ?? ''] ?? log.entityName ?? '—'}
+                        <td className="px-3 py-2">
+                          <span className="badge-group">
+                            {ent?.icon && <i className={`bi ${ent.icon} text-muted`} />}
+                            {ent?.label ?? log.entityName ?? '—'}
                           </span>
                         </td>
-                        <td>
-                          <code style={{ fontSize: '0.8rem' }}>{log.entityId ?? '—'}</code>
+                        <td className="px-3 py-2">
+                          {log.entityId ? (
+                            <span className="log-code-badge" title={log.entityId}>
+                              {log.entityId}
+                            </span>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
                         </td>
-                        <td className="text-secondary" style={{ fontSize: '0.875rem' }}>
+                        <td className="px-3 py-2" style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.45 }}>
                           {log.description ?? '—'}
                         </td>
                       </tr>

@@ -47,6 +47,15 @@ export function App() {
     activitySocket.connect();
 
     const unsubscribe = activitySocket.subscribe((log) => {
+      // Không hiển thị trên giao diện cho kết quả/thông báo hệ thống Camunda
+      if (
+        log.action?.startsWith('CAMUNDA') ||
+        log.action?.startsWith('INIT_') ||
+        log.description?.toLowerCase().includes('camunda')
+      ) {
+        return;
+      }
+
       // Don't show toast for own login
       if (log.action === 'LOGIN' && log.username === currentUser.username) {
         return;

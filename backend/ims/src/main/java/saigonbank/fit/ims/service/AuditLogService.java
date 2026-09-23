@@ -11,10 +11,14 @@ import saigonbank.fit.ims.config.websocket.ActivityWebSocketHandler;
 import saigonbank.fit.ims.dto.response.AuditLogResponse;
 import saigonbank.fit.ims.dto.response.PageResponse;
 import saigonbank.fit.ims.entity.AuditLog;
+import saigonbank.fit.ims.entity.User;
 import saigonbank.fit.ims.repository.AuditLogRepository;
+import saigonbank.fit.ims.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 // Ghi và truy vấn audit log; logAction dùng REQUIRES_NEW để độc lập với transaction gốc
 @Slf4j
@@ -24,6 +28,7 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final ActivityWebSocketHandler activityWebSocketHandler;
+    private final UserRepository userRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAction(String username, String action, String entityName,
@@ -38,7 +43,14 @@ public class AuditLogService {
                     .build();
             entry = auditLogRepository.save(entry);
 
-            AuditLogResponse response = mapToResponse(entry);
+            String fullName = null;
+            if (username != null && !username.isBlank()) {
+                fullName = userRepository.findByUsername(username)
+                        .map(User::getFullName)
+                        .orElse(null);
+            }
+
+            AuditLogResponse response = mapToResponse(entry, fullName);
             activityWebSocketHandler.broadcast(response);
         } catch (Exception e) {
             log.error("Failed to write audit log: action={}, entity={}, id={}: {}",
@@ -59,8 +71,22 @@ public class AuditLogService {
         Page<AuditLog> page = auditLogRepository.findWithFilters(
                 username, action, entityName, from, to, pageable);
 
+        List<String> usernames = page.getContent().stream()
+                .map(AuditLog::getUsername)
+                .filter(u -> u != null && !u.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, String> userFullNameMap = userRepository.findByUsernameIn(usernames).stream()
+                .filter(u -> u.getUsername() != null && u.getFullName() != null)
+                .collect(Collectors.toMap(
+                        User::getUsername,
+                        User::getFullName,
+                        (existing, replacement) -> existing
+                ));
+
         List<AuditLogResponse> content = page.getContent().stream()
-                .map(this::mapToResponse)
+                .map(log -> mapToResponse(log, userFullNameMap.get(log.getUsername())))
                 .toList();
 
         return PageResponse.<AuditLogResponse>builder()
@@ -73,10 +99,11 @@ public class AuditLogService {
                 .build();
     }
 
-    private AuditLogResponse mapToResponse(AuditLog log) {
+    private AuditLogResponse mapToResponse(AuditLog log, String fullName) {
         return AuditLogResponse.builder()
                 .id(log.getId())
                 .username(log.getUsername())
+                .fullName(fullName)
                 .action(log.getAction())
                 .entityName(log.getEntityName())
                 .entityId(log.getEntityId())

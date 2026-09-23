@@ -44,9 +44,26 @@ public class MonthlyClosingDelegate implements JavaDelegate {
             MonthlyClosingResponse resp = monthlyClosingService.lockMonth(year, month, username);
             execution.setVariable("closingResult", "SUCCESS");
             execution.setVariable("lockedAt", resp.getLockedAt() != null ? resp.getLockedAt().toString() : "");
-            log.info("[Task_ThucHienChotSo] Đã khóa sổ kỳ {}/{} thành công bởi {}", month, year, username);
+            log.info("""
+                \n================================================================================
+                🔒 [CAMUNDA CLOSING RESULT - KẾT QUẢ QUY TRÌNH CHỐT SỔ]
+                ▶ Process Instance ID   : {}
+                ▶ Kỳ kế toán            : Tháng {}/{}
+                ▶ Người thực hiện       : {}
+                ▶ Thời điểm khóa        : {}
+                ▶ Trạng thái            : ĐÃ KHÓA SỔ & KẾT CHUYỂN THÀNH CÔNG
+                ================================================================================
+                """, processInstanceId, month, year, username, resp.getLockedAt());
         } else {
-            log.info("[Task_ThucHienChotSo] Mô phỏng khóa sổ tháng {}/{} thành công", month, year);
+            log.info("""
+                \n================================================================================
+                🔒 [CAMUNDA CLOSING RESULT - KẾT QUẢ QUY TRÌNH CHỐT SỔ (MÔ PHỎNG)]
+                ▶ Process Instance ID   : {}
+                ▶ Kỳ kế toán            : Tháng {}/{}
+                ▶ Người thực hiện       : {}
+                ▶ Trạng thái            : Thành công
+                ================================================================================
+                """, processInstanceId, month, year, username);
         }
     }
 }

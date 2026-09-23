@@ -49,9 +49,8 @@ public class ImportController {
     public ResponseEntity<ApiResponse<ImportResponse>> createImport(
             @Valid @RequestBody ImportRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        ImportResponse response = importService.createImport(request, userDetails.getUsername());
-        // Tự động kích hoạt quy trình Camunda
-        camundaWorkflowService.startImportWorkflow(response, userDetails.getUsername());
+        // Quy trình nhập được khởi chạy và điều phối bởi Camunda; ImportService chỉ được gọi qua Delegate của BPMN
+        ImportResponse response = camundaWorkflowService.startImportProcess(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Tạo phiếu nhập thành công", response));
     }
