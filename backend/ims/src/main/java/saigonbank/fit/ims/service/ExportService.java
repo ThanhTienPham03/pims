@@ -12,6 +12,7 @@ import saigonbank.fit.ims.dto.response.ExportDetailResponse;
 import saigonbank.fit.ims.dto.response.ExportResponse;
 import saigonbank.fit.ims.dto.response.PageResponse;
 import saigonbank.fit.ims.entity.*;
+import saigonbank.fit.ims.entity.User;
 import saigonbank.fit.ims.exception.*;
 import saigonbank.fit.ims.repository.*;
 
@@ -57,6 +58,7 @@ public class ExportService {
     private final DocumentSequenceRepository documentSequenceRepository;
     private final MonthlyClosingService monthlyClosingService;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     // Độ ưu tiên nhóm đại diện khi số dòng bằng nhau (ACTT > VPP > VLK)
     private static final Map<String, Integer> GROUP_PRIORITY = Map.of(
@@ -157,8 +159,24 @@ public class ExportService {
         Page<InventoryTransaction> page = transactionRepository.findExports(soPhieu, noiNhan, trangThai, from, to,
                 pageable);
 
+        List<String> usernames = page.getContent().stream()
+                .map(InventoryTransaction::getCreatedBy)
+                .filter(u -> u != null && !u.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, String> userFullNameMap = userRepository.findByUsernameIn(usernames).stream()
+                .filter(u -> u.getUsername() != null && u.getFullName() != null && !u.getFullName().isBlank())
+                .collect(Collectors.toMap(
+                        User::getUsername,
+                        User::getFullName,
+                        (existing, replacement) -> existing
+                ));
+
         return PageResponse.<ExportResponse>builder()
-                .content(page.getContent().stream().map(this::mapToExportResponse).toList())
+                .content(page.getContent().stream()
+                        .map(tx -> mapToExportResponse(tx, userFullNameMap.getOrDefault(tx.getCreatedBy(), tx.getCreatedBy())))
+                        .toList())
                 .pageNumber(page.getNumber())
                 .pageSize(page.getSize())
                 .totalElements(page.getTotalElements())
@@ -302,7 +320,19 @@ public class ExportService {
                 });
     }
 
+    private String resolveFullName(String username) {
+        if (username == null || username.isBlank()) return null;
+        return userRepository.findByUsername(username)
+                .map(User::getFullName)
+                .filter(name -> !name.isBlank())
+                .orElse(username);
+    }
+
     private ExportResponse mapToExportResponse(InventoryTransaction tx) {
+        return mapToExportResponse(tx, resolveFullName(tx.getCreatedBy()));
+    }
+
+    private ExportResponse mapToExportResponse(InventoryTransaction tx, String creatorFullName) {
         List<ExportDetailResponse> details = tx.getDetails().stream()
                 .map(d -> ExportDetailResponse.builder()
                         .id(d.getId())
@@ -317,6 +347,8 @@ public class ExportService {
                         .build())
                 .toList();
 
+        String resolvedCreator = (creatorFullName != null && !creatorFullName.isBlank()) ? creatorFullName : tx.getCreatedBy();
+
         return ExportResponse.builder()
                 .id(tx.getId())
                 .soPhieu(tx.getTransactionCode())
@@ -330,6 +362,7 @@ public class ExportService {
                 .nhomDaiDien(tx.getGroupRepresentative())
                 .workflowStatus(tx.getWorkflowStatus())
                 .createdBy(tx.getCreatedBy())
+                .creatorFullName(resolvedCreator)
                 .createdAt(tx.getCreatedAt())
                 .details(details)
                 .build();

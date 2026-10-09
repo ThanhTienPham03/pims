@@ -1,4 +1,4 @@
-﻿import React, { useRef } from 'react';
+import React, { useRef } from 'react';
 import type { ImportDoc, ExportDoc } from '../../types';
 import { numberToVietnamese } from '../../utils/numberToVietnamese';
 import { Modal } from '../common/Modal';
@@ -67,7 +67,7 @@ export const PrintVoucherModal: React.FC<PrintVoucherModalProps> = ({ isOpen, on
           {exp && <><div><strong>Noi nhan:</strong> {exp.noiNhan || '---'}</div>
           <div><strong>Ly do xuat:</strong> {exp.lyDoXuat || '---'}</div></>}
           <div><strong>TK No / Co:</strong> {voucher.tkNo || '---'} / {voucher.tkCo || '---'}</div>
-          <div><strong>Nguoi lap:</strong> {voucher.createdBy || '---'}</div>
+          <div><strong>Nguoi lap:</strong> {voucher.creatorFullName || voucher.createdBy || '---'}</div>
         </div>
 
         {/* Detail Table */}

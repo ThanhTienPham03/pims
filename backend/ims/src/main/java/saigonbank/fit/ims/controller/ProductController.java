@@ -22,7 +22,9 @@ import saigonbank.fit.ims.service.CamundaWorkflowService;
 import saigonbank.fit.ims.service.ProductService;
 
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -157,7 +159,7 @@ public class ProductController {
 
         // Tự động kích hoạt Camunda workflow
         try {
-            java.util.Map<String, Object> vars = new java.util.HashMap<>();
+            Map<String, Object> vars = new HashMap<>();
             vars.put("productId", id);
             camundaWorkflowService.startCatalogWorkflow("XOA_NGUNG", vars, username);
         } catch (Exception e) {

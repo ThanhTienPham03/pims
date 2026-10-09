@@ -12,6 +12,7 @@ import saigonbank.fit.ims.dto.response.ImportDetailResponse;
 import saigonbank.fit.ims.dto.response.ImportResponse;
 import saigonbank.fit.ims.dto.response.PageResponse;
 import saigonbank.fit.ims.entity.*;
+import saigonbank.fit.ims.entity.User;
 import saigonbank.fit.ims.exception.AcqtMixingException;
 import saigonbank.fit.ims.exception.InvalidImportException;
 import saigonbank.fit.ims.exception.MonthLockedException;
@@ -51,6 +52,7 @@ public class ImportService {
     private final DocumentSequenceRepository documentSequenceRepository;
     private final MonthlyClosingService monthlyClosingService;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     // Độ ưu tiên nhóm đại diện khi số dòng bằng nhau (ACTT > VPP > VLK)
     private static final Map<String, Integer> GROUP_PRIORITY = Map.of(
@@ -156,8 +158,24 @@ public class ImportService {
         Page<InventoryTransaction> page =
                 transactionRepository.findImports(soPhieu, noiMua, trangThai, from, to, pageable);
 
+        List<String> usernames = page.getContent().stream()
+                .map(InventoryTransaction::getCreatedBy)
+                .filter(u -> u != null && !u.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, String> userFullNameMap = userRepository.findByUsernameIn(usernames).stream()
+                .filter(u -> u.getUsername() != null && u.getFullName() != null && !u.getFullName().isBlank())
+                .collect(Collectors.toMap(
+                        User::getUsername,
+                        User::getFullName,
+                        (existing, replacement) -> existing
+                ));
+
         return PageResponse.<ImportResponse>builder()
-                .content(page.getContent().stream().map(this::mapToImportResponse).toList())
+                .content(page.getContent().stream()
+                        .map(tx -> mapToImportResponse(tx, userFullNameMap.getOrDefault(tx.getCreatedBy(), tx.getCreatedBy())))
+                        .toList())
                 .pageNumber(page.getNumber())
                 .pageSize(page.getSize())
                 .totalElements(page.getTotalElements())
@@ -304,7 +322,19 @@ public class ImportService {
                 });
     }
 
+    private String resolveFullName(String username) {
+        if (username == null || username.isBlank()) return null;
+        return userRepository.findByUsername(username)
+                .map(User::getFullName)
+                .filter(name -> !name.isBlank())
+                .orElse(username);
+    }
+
     private ImportResponse mapToImportResponse(InventoryTransaction tx) {
+        return mapToImportResponse(tx, resolveFullName(tx.getCreatedBy()));
+    }
+
+    private ImportResponse mapToImportResponse(InventoryTransaction tx, String creatorFullName) {
         List<ImportDetailResponse> details = tx.getDetails().stream()
                 .map(d -> ImportDetailResponse.builder()
                         .id(d.getId())
@@ -318,6 +348,8 @@ public class ImportService {
                         .amount(d.getAmount())
                         .build())
                 .toList();
+
+        String resolvedCreator = (creatorFullName != null && !creatorFullName.isBlank()) ? creatorFullName : tx.getCreatedBy();
 
         return ImportResponse.builder()
                 .id(tx.getId())
@@ -334,6 +366,7 @@ public class ImportService {
                 .nhomDaiDien(tx.getGroupRepresentative())
                 .workflowStatus(tx.getWorkflowStatus())
                 .createdBy(tx.getCreatedBy())
+                .creatorFullName(resolvedCreator)
                 .createdAt(tx.getCreatedAt())
                 .details(details)
                 .build();

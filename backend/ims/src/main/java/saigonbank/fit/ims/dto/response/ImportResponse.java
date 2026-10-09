@@ -29,6 +29,7 @@ public class ImportResponse {
     private String nhomDaiDien;
     private String workflowStatus;
     private String createdBy;
+    private String creatorFullName;
     private LocalDateTime createdAt;
     private List<ImportDetailResponse> details;
 }

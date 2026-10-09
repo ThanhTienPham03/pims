@@ -55,7 +55,7 @@ public class ExportController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ExportResponse>> cancelExport(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {

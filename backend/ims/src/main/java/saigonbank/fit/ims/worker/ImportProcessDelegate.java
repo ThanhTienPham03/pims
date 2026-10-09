@@ -40,9 +40,13 @@ public class ImportProcessDelegate implements JavaDelegate {
                 processInstanceId);
 
         Object reqObj = execution.getVariable("importRequest");
-        String username = (String) execution.getVariable("fullname");
-        if (username == null)
+        String username = (String) execution.getVariable("username");
+        if (username == null) {
+            username = (String) execution.getVariable("fullname");
+        }
+        if (username == null) {
             username = "camunda_system";
+        }
 
         if (reqObj instanceof ImportRequest importRequest && importService != null) {
             ImportResponse resp = importService.createImport(importRequest, username);
@@ -60,7 +64,7 @@ public class ImportProcessDelegate implements JavaDelegate {
 
             log.info("""
                     \n================================================================================
-                    📥 [CAMUNDA IMPORT RESULT - KẾT QUẢ QUY TRÌNH NHẬP ẤN PHẨM]
+                     [CAMUNDA IMPORT RESULT - KẾT QUẢ QUY TRÌNH NHẬP ẤN PHẨM]
                     ▶ Bước thực thi         : {}
                     ▶ Process Instance ID   : {}
                     ▶ Số phiếu nhập         : {}
@@ -78,7 +82,7 @@ public class ImportProcessDelegate implements JavaDelegate {
             }
             log.info("""
                     \n================================================================================
-                    📥 [CAMUNDA IMPORT RESULT - KẾT QUẢ BƯỚC NHẬP ẤN PHẨM]
+                     [CAMUNDA IMPORT RESULT - KẾT QUẢ BƯỚC NHẬP ẤN PHẨM]
                     ▶ Bước thực thi         : {}
                     ▶ Process Instance ID   : {}
                     ▶ Số phiếu              : {}

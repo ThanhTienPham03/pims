@@ -134,6 +134,7 @@ export interface ImportDoc {
   nhomDaiDien?: string;
   workflowStatus?: string;
   createdBy?: string;
+  creatorFullName?: string;
   createdAt?: string;
   details: ImportDetail[];
 }
@@ -178,6 +179,7 @@ export interface ExportDoc {
   nhomDaiDien?: string;
   workflowStatus?: string;
   createdBy?: string;
+  creatorFullName?: string;
   createdAt?: string;
   details: ExportDetail[];
 }

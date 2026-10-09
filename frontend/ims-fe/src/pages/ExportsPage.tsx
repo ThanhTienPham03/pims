@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { exportService } from '../services';
+import { exportService, authService } from '../services';
 import type { ExportDoc } from '../types';
 import { Modal } from '../components/common/Modal';
 import { PrintVoucherModal } from '../components/print/PrintVoucherModal';
@@ -10,6 +10,10 @@ interface ExportsPageProps {
 }
 
 export const ExportsPage: React.FC<ExportsPageProps> = ({ showToast, onNavigateCreate }) => {
+  const currentUser = authService.getCurrentUser();
+  const userRoles = currentUser?.roles || [];
+  const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('ROLE_ADMIN');
+
   const [exports, setExports] = useState<ExportDoc[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -60,6 +64,11 @@ export const ExportsPage: React.FC<ExportsPageProps> = ({ showToast, onNavigateC
   };
 
   const handleCancelExport = async (id: number, soPhieu: string) => {
+    if (!isAdmin) {
+      showToast('Chỉ Quản trị viên (Admin) mới có quyền hủy phiếu xuất!', 'error');
+      return;
+    }
+
     if (!window.confirm(`Bạn có chắc muốn HỦY phiếu xuất [${soPhieu}]? Hành động này sẽ hoàn trả tồn kho.`)) {
       return;
     }
@@ -192,7 +201,7 @@ export const ExportsPage: React.FC<ExportsPageProps> = ({ showToast, onNavigateC
                         {item.trangThai === 'HOAN_THANH' ? 'Hoàn thành' : 'Đã hủy'}
                       </span>
                     </td>
-                    <td className="small text-secondary">{item.createdBy || 'system'}</td>
+                    <td className="small text-secondary">{item.creatorFullName || item.createdBy || 'system'}</td>
                     <td className="text-center">
                       <div className="d-flex gap-2 justify-content-center">
                         <button
@@ -210,7 +219,7 @@ export const ExportsPage: React.FC<ExportsPageProps> = ({ showToast, onNavigateC
                         >
                           <i className="bi bi-printer" aria-hidden="true" />
                         </button>
-                        {item.trangThai === 'HOAN_THANH' && (
+                        {isAdmin && item.trangThai === 'HOAN_THANH' && (
                           <button
                             type="button"
                             className="btn btn-outline-danger btn-sm"
@@ -270,7 +279,7 @@ export const ExportsPage: React.FC<ExportsPageProps> = ({ showToast, onNavigateC
               <div className="col-md-4"><strong>Lý do:</strong> {selectedExport.lyDoXuat || '—'}</div>
               <div className="col-md-4"><strong>TK Nợ / Có:</strong> {selectedExport.tkNo || '—'} / {selectedExport.tkCo || '—'}</div>
               <div className="col-md-4"><strong>Trạng thái:</strong> {selectedExport.trangThai}</div>
-              <div className="col-md-4"><strong>Người lập:</strong> {selectedExport.createdBy || 'system'}</div>
+              <div className="col-md-4"><strong>Người lập:</strong> {selectedExport.creatorFullName || selectedExport.createdBy || 'system'}</div>
             </div>
 
             <h4 className="fs-6 fw-bold mb-2">Danh Sách Hàng Xuất:</h4>

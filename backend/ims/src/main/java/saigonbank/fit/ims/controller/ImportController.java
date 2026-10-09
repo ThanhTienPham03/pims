@@ -56,7 +56,7 @@ public class ImportController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ImportResponse>> cancelImport(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {

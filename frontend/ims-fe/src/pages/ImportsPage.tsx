@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { importService } from '../services';
+import { importService, authService } from '../services';
 import type { ImportDoc } from '../types';
 import { Modal } from '../components/common/Modal';
 import { PrintVoucherModal } from '../components/print/PrintVoucherModal';
@@ -10,6 +10,10 @@ interface ImportsPageProps {
 }
 
 export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateCreate }) => {
+  const currentUser = authService.getCurrentUser();
+  const userRoles = currentUser?.roles || [];
+  const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('ROLE_ADMIN');
+
   const [imports, setImports] = useState<ImportDoc[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -60,6 +64,11 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
   };
 
   const handleCancelImport = async (id: number, soPhieu: string) => {
+    if (!isAdmin) {
+      showToast('Chỉ Quản trị viên (Admin) mới có quyền hủy phiếu nhập!', 'error');
+      return;
+    }
+
     if (!window.confirm(`Bạn có chắc muốn HỦY phiếu nhập [${soPhieu}]? Hành động này sẽ hoàn tác tồn kho tương ứng.`)) {
       return;
     }
@@ -192,7 +201,7 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
                         {item.trangThai === 'HOAN_THANH' ? 'Hoàn thành' : 'Đã hủy'}
                       </span>
                     </td>
-                    <td className="small text-secondary">{item.createdBy || 'system'}</td>
+                    <td className="small text-secondary">{item.creatorFullName || item.createdBy || 'system'}</td>
                     <td className="text-center">
                       <div className="d-flex gap-2 justify-content-center">
                         <button
@@ -210,7 +219,7 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
                         >
                           <i className="bi bi-printer" aria-hidden="true" />
                         </button>
-                        {item.trangThai === 'HOAN_THANH' && (
+                        {isAdmin && item.trangThai === 'HOAN_THANH' && (
                           <button
                             type="button"
                             className="btn btn-outline-danger btn-sm"
@@ -271,7 +280,7 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
               <div className="col-md-4"><strong>Số hóa đơn:</strong> {selectedImport.soHoaDon || '—'}</div>
               <div className="col-md-4"><strong>Ngày hóa đơn:</strong> {selectedImport.ngayHoaDon || '—'}</div>
               <div className="col-md-4"><strong>TK Nợ / Có:</strong> {selectedImport.tkNo || '—'} / {selectedImport.tkCo || '—'}</div>
-              <div className="col-md-4"><strong>Người lập:</strong> {selectedImport.createdBy || 'system'}</div>
+              <div className="col-md-4"><strong>Người lập:</strong> {selectedImport.creatorFullName || selectedImport.createdBy || 'system'}</div>
             </div>
 
             <h4 className="fs-6 fw-bold mb-2">Danh Sách Hàng Hóa Nhập:</h4>
