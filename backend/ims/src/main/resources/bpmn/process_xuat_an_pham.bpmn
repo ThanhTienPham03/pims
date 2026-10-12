@@ -213,20 +213,18 @@ Người xuất, số phiếu, nơi nhận, lý do, tổng tiền, thời gian.<
           <dc:Bounds x="1170" y="473" width="90" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TinhThanhTienConTon_di" bpmnElement="Task_TinhThanhTienConTon" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1220" y="397" width="160" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_TinhThanhTienHetTon_di" bpmnElement="Task_TinhThanhTienHetTon" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
         <dc:Bounds x="1210" y="530" width="160" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_LoiThangKhoa_Xuat_di" bpmnElement="End_LoiThangKhoa_Xuat" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
-        <dc:Bounds x="567" y="600" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="542" y="643" width="89" height="27" />
-        </bpmndi:BPMNLabel>
+      <bpmndi:BPMNShape id="Task_CapSoVaGhiNhan_di" bpmnElement="Task_CapSoVaGhiNhan" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1555" y="440" width="160" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_LoiTonKho_di" bpmnElement="End_LoiTonKho" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
-        <dc:Bounds x="967" y="600" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="945" y="643" width="81" height="27" />
-        </bpmndi:BPMNLabel>
+      <bpmndi:BPMNShape id="Task_GhiAuditLog_Xuat_di" bpmnElement="Task_GhiAuditLog_Xuat" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
+        <dc:Bounds x="1815" y="440" width="130" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_XuatThanhCong_di" bpmnElement="End_XuatThanhCong" bioc:stroke="#205022" bioc:fill="#c8e6c9" color:background-color="#c8e6c9" color:border-color="#205022">
         <dc:Bounds x="2042" y="462" width="36" height="36" />
@@ -234,12 +232,23 @@ Người xuất, số phiếu, nơi nhận, lý do, tổng tiền, thời gian.<
           <dc:Bounds x="2018" y="505" width="87" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_GhiAuditLog_Xuat_di" bpmnElement="Task_GhiAuditLog_Xuat" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
-        <dc:Bounds x="1815" y="440" width="130" height="80" />
+      <bpmndi:BPMNShape id="End_LoiThangKhoa_Xuat_di" bpmnElement="End_LoiThangKhoa_Xuat" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="567" y="600" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="542" y="643" width="89" height="27" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_CapSoVaGhiNhan_di" bpmnElement="Task_CapSoVaGhiNhan" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
-        <dc:Bounds x="1555" y="440" width="160" height="80" />
-        <bpmndi:BPMNLabel />
+      <bpmndi:BPMNShape id="End_LoiACQT_di" bpmnElement="End_LoiACQT" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="767" y="600" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="745" y="643" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_LoiTonKho_di" bpmnElement="End_LoiTonKho" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="967" y="600" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="945" y="643" width="81" height="27" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_LoiDuLieu_Xuat_di" bpmnElement="End_LoiDuLieu_Xuat" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
         <dc:Bounds x="1692" y="582" width="36" height="36" />
@@ -250,61 +259,40 @@ Người xuất, số phiếu, nơi nhận, lý do, tổng tiền, thời gian.<
       <bpmndi:BPMNShape id="Gateway_1213k32_di" bpmnElement="Gateway_1213k32" isMarkerVisible="true">
         <dc:Bounds x="1435" y="475" width="50" height="50" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_TinhThanhTienConTon_di" bpmnElement="Task_TinhThanhTienConTon" bioc:stroke="#6b3c00" bioc:fill="#ffe0b2" color:background-color="#ffe0b2" color:border-color="#6b3c00">
-        <dc:Bounds x="1220" y="397" width="160" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_LoiACQT_di" bpmnElement="End_LoiACQT" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
-        <dc:Bounds x="767" y="600" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="745" y="643" width="82" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Association_Xuat_AuditLog_di" bpmnElement="Association_Xuat_AuditLog">
-        <di:waypoint x="1866" y="440" />
-        <di:waypoint x="1816" y="375" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Association_Xuat_CapSo_di" bpmnElement="Association_Xuat_CapSo">
-        <di:waypoint x="1646" y="520" />
-        <di:waypoint x="1604" y="690" />
+        <di:waypoint x="1590" y="520" />
+        <di:waypoint x="1622" y="690" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Xuat_ConTon_di" bpmnElement="Association_Xuat_ConTon">
-        <di:waypoint x="1306" y="397" />
-        <di:waypoint x="1304" y="375" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Xuat_ThangKhoa_di" bpmnElement="Association_Xuat_ThangKhoa">
-        <di:waypoint x="531" y="520" />
-        <di:waypoint x="412" y="640" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Xuat_ACQT_di" bpmnElement="Association_Xuat_ACQT">
-        <di:waypoint x="768" y="524" />
-        <di:waypoint x="672" y="710" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Xuat_TonKho_di" bpmnElement="Association_Xuat_TonKho">
-        <di:waypoint x="975" y="520" />
-        <di:waypoint x="960" y="718" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Xuat_HetTon_di" bpmnElement="Association_Xuat_HetTon">
-        <di:waypoint x="1282" y="610" />
-        <di:waypoint x="1260" y="660" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Boundary_LoiDuLieu_Xuat_di" bpmnElement="Boundary_LoiDuLieu_Xuat" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
-        <dc:Bounds x="1617" y="502" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="TextAnnotation_Xuat_Nhap_di" bpmnElement="TextAnnotation_Xuat_Nhap">
         <dc:Bounds x="290" y="80" width="320" height="72" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_Xuat_ThangKhoa_di" bpmnElement="TextAnnotation_Xuat_ThangKhoa">
+        <dc:Bounds x="285" y="640" width="230" height="75" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_Xuat_ACQT_di" bpmnElement="TextAnnotation_Xuat_ACQT">
+        <dc:Bounds x="610" y="710" width="230" height="86" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_Xuat_TonKho_di" bpmnElement="TextAnnotation_Xuat_TonKho">
+        <dc:Bounds x="910" y="718" width="240" height="72" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="TextAnnotation_Xuat_ConTon_di" bpmnElement="TextAnnotation_Xuat_ConTon">
         <dc:Bounds x="1250" y="300" width="240" height="75" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="TextAnnotation_Xuat_CapSo_di" bpmnElement="TextAnnotation_Xuat_CapSo">
-        <dc:Bounds x="1510" y="690" width="250" height="100" />
+      <bpmndi:BPMNShape id="TextAnnotation_Xuat_HetTon_di" bpmnElement="TextAnnotation_Xuat_HetTon">
+        <dc:Bounds x="1150" y="660" width="250" height="86" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="TextAnnotation_Xuat_AuditLog_di" bpmnElement="TextAnnotation_Xuat_AuditLog">
         <dc:Bounds x="1750" y="300" width="200" height="75" />
         <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_LoiDuLieu_Xuat_di" bpmnElement="Boundary_LoiDuLieu_Xuat" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1617" y="502" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Boundary_LoiKho_di" bpmnElement="Boundary_LoiKho" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
         <dc:Bounds x="967" y="502" width="36" height="36" />
@@ -387,28 +375,40 @@ Người xuất, số phiếu, nơi nhận, lý do, tổng tiền, thời gian.<
         <di:waypoint x="1635" y="600" />
         <di:waypoint x="1692" y="600" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Association_Xuat_Nhap_di" bpmnElement="Association_Xuat_Nhap">
-        <di:waypoint x="388" y="240" />
-        <di:waypoint x="381" y="152" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_16cn2k2_di" bpmnElement="Flow_16cn2k2">
         <di:waypoint x="1485" y="500" />
         <di:waypoint x="1555" y="500" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="TextAnnotation_Xuat_ThangKhoa_di" bpmnElement="TextAnnotation_Xuat_ThangKhoa">
-        <dc:Bounds x="285" y="640" width="230" height="75" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="TextAnnotation_Xuat_ACQT_di" bpmnElement="TextAnnotation_Xuat_ACQT">
-        <dc:Bounds x="610" y="710" width="230" height="86" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="TextAnnotation_Xuat_TonKho_di" bpmnElement="TextAnnotation_Xuat_TonKho">
-        <dc:Bounds x="910" y="718" width="240" height="72" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="TextAnnotation_Xuat_HetTon_di" bpmnElement="TextAnnotation_Xuat_HetTon">
-        <dc:Bounds x="1150" y="660" width="250" height="86" />
+      <bpmndi:BPMNEdge id="Association_Xuat_Nhap_di" bpmnElement="Association_Xuat_Nhap">
+        <di:waypoint x="388" y="240" />
+        <di:waypoint x="381" y="152" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Xuat_ThangKhoa_di" bpmnElement="Association_Xuat_ThangKhoa">
+        <di:waypoint x="531" y="520" />
+        <di:waypoint x="412" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Xuat_ACQT_di" bpmnElement="Association_Xuat_ACQT">
+        <di:waypoint x="768" y="524" />
+        <di:waypoint x="672" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Xuat_TonKho_di" bpmnElement="Association_Xuat_TonKho">
+        <di:waypoint x="975" y="520" />
+        <di:waypoint x="960" y="718" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Xuat_ConTon_di" bpmnElement="Association_Xuat_ConTon">
+        <di:waypoint x="1306" y="397" />
+        <di:waypoint x="1304" y="375" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Xuat_HetTon_di" bpmnElement="Association_Xuat_HetTon">
+        <di:waypoint x="1282" y="610" />
+        <di:waypoint x="1260" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Xuat_AuditLog_di" bpmnElement="Association_Xuat_AuditLog">
+        <di:waypoint x="1866" y="440" />
+        <di:waypoint x="1816" y="375" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_Xuat_CapSo_di" bpmnElement="TextAnnotation_Xuat_CapSo">
+        <dc:Bounds x="1550" y="690" width="250" height="100" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>

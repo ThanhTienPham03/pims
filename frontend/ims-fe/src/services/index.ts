@@ -56,9 +56,13 @@ export const authService = {
     return Date.now() > parseInt(expiry, 10);
   },
 
-  logout: () => {
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Bỏ qua lỗi nếu mạng rớt, vẫn xóa token cục bộ
+    }
     api.removeToken();
-    localStorage.removeItem('pims_token_expiry');
   },
 };
 

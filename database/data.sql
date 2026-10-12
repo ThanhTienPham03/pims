@@ -6,7 +6,7 @@
 -- Bảng inventory_transactions thay thế imports + exports
 -- ============================================================
 
-USE pims_db;
+USE ims;
 
 -- ============================================================
 -- 1. ROLES (seed nếu chưa có — schema.sql đã INSERT IGNORE)
@@ -21,9 +21,9 @@ ON DUPLICATE KEY UPDATE description = VALUES(description);
 -- 2. USERS (password: Admin@123 - BCrypt encoded)
 -- ============================================================
 INSERT INTO users (username, password, full_name, email, is_active) VALUES
-    ('admin',      '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/.H/b6OiT2CbQ.VCCS', 'Quản trị viên',  'admin@pims.local',      TRUE),
-    ('user01',     '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/.H/b6OiT2CbQ.VCCS', 'Nhân viên kho',  'user01@pims.local',     TRUE),
-    ('controller', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/.H/b6OiT2CbQ.VCCS', 'Kiểm soát viên', 'controller@pims.local', TRUE)
+    ('admin',      '$2a$10$vhdT7j7GM3o9pspChw.GL.SF4yhChZXkXNsjakl3mFJoYuHE12P9S', 'Quản trị viên',  'admin@pims.local',      TRUE),
+    ('user01',     '$2a$10$vhdT7j7GM3o9pspChw.GL.SF4yhChZXkXNsjakl3mFJoYuHE12P9S', 'Nhân viên kho',  'user01@pims.local',     TRUE),
+    ('controller', '$2a$10$vhdT7j7GM3o9pspChw.GL.SF4yhChZXkXNsjakl3mFJoYuHE12P9S', 'Kiểm soát viên', 'controller@pims.local', TRUE)
 ON DUPLICATE KEY UPDATE full_name = VALUES(full_name);
 
 -- ============================================================

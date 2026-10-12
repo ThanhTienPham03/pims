@@ -12,6 +12,7 @@ class ApiClient {
   public removeToken() {
     localStorage.removeItem('pims_token');
     localStorage.removeItem('pims_user');
+    localStorage.removeItem('pims_token_expiry');
   }
 
   private getHeaders(): HeadersInit {
@@ -43,6 +44,7 @@ class ApiClient {
     const response = await fetch(url, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -52,6 +54,7 @@ class ApiClient {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: this.getHeaders(),
+      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -62,6 +65,7 @@ class ApiClient {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: this.getHeaders(),
+      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -72,6 +76,7 @@ class ApiClient {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PATCH',
       headers: this.getHeaders(),
+      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -82,6 +87,7 @@ class ApiClient {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);

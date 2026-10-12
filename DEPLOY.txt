@@ -1,0 +1,160 @@
+================================================================================
+           HƯỚNG DẪN TRIỂN KHAI (DEPLOY) HỆ THỐNG PIMS
+   Publication Inventory Management System - Saigonbank FIT Internship
+================================================================================
+
+Tài liệu hướng dẫn triển khai toàn diện hệ thống PIMS bằng Docker Compose 
+trên môi trường máy tính cá nhân (Laptop) hoặc máy chủ Linux Host / VPS.
+
+--------------------------------------------------------------------------------
+1. KIẾN TRÚC TRIỂN KHAI HỆ THỐNG
+--------------------------------------------------------------------------------
+
+[ Người Dùng ] ──HTTP/HTTPS──> [ Nginx (Frontend Container) : Cổng 80 ]
+                                     │
+                 ┌───────────────────┴───────────────────┐
+                 │                                       │
+            [ Static Files ]               [ Reverse Proxy: /api, /ws, /camunda ]
+            (React + Vite SPA)                           │
+                                                         ▼
+                                          [ Spring Boot + Camunda 7 : Cổng 8085 ]
+                                                         │
+                                                         ▼
+                                            [ MariaDB 11.4 : Cổng 3306 ]
+                                            (Volume: pims_mariadb_data)
+
+* Chi tiết các thành phần:
+- Frontend Container: Nginx 1.27 Alpine phục vụ ứng dụng React SPA, đồng thời đảm
+  nhận vai trò Reverse Proxy điều hướng /api/, /ws/ (WebSocket audit log) và 
+  /camunda/ về Backend.
+- Backend Container: Spring Boot 3.5.3 (Java 21) tích hợp embedded Camunda 7 engine,
+  kết nối MariaDB. Hỗ trợ xác thực bảo mật HttpOnly Cookie JWT.
+- Database Container: MariaDB 11.4 LTS tự động nạp bảng dữ liệu (01_schema.sql)
+  và dữ liệu mẫu (02_data.sql) khi khởi chạy lần đầu.
+
+--------------------------------------------------------------------------------
+2. YÊU CẦU TIỀN ĐỀ
+--------------------------------------------------------------------------------
+
+- Đã cài đặt Docker (phiên bản 24+) và Docker Compose (v2+).
+- Bộ nhớ RAM khuyến nghị: Tối thiểu 4GB RAM trở lên.
+- Cổng mạng cần trống: 80 (Frontend Web), 8086 (Backend API), 3307 (MariaDB host).
+
+--------------------------------------------------------------------------------
+3. CÁC BƯỚC KHỞI CHẠY HỆ THỐNG (QUICK START)
+--------------------------------------------------------------------------------
+
+Bước 1: Chuẩn bị tệp cấu hình môi trường (.env)
+Tại thư mục gốc dự án, sao chép file .env.example thành .env:
+  - Trên Windows PowerShell:
+      Copy-Item .env.example .env
+  - Trên Linux / macOS / Terminal:
+      cp .env.example .env
+
+Bước 2: Build và khởi động các container
+Chạy lệnh duy nhất để tự động build và chạy cả 3 container:
+      docker compose up -d --build
+
+Bước 3: Kiểm tra trạng thái hệ thống
+      docker compose ps
+
+Sau khi cả 3 container (pims-database, pims-backend, pims-frontend) chuyển sang 
+trạng thái "Up" (và database đạt "healthy"), hệ thống đã sẵn sàng sử dụng.
+
+--------------------------------------------------------------------------------
+4. THÔNG TIN TRUY CẬP & TÀI KHOẢN MẶC ĐỊNH
+--------------------------------------------------------------------------------
+
+* Các địa chỉ truy cập:
+- Giao diện người dùng (PIMS Web qua Nginx):
+    http://localhost  (Cổng 80)
+- Camunda 7 Cockpit (Quản lý quy trình BPMN):
+    http://localhost/camunda/app/cockpit/
+- Swagger UI (REST API Documentation):
+    http://localhost:8086/swagger-ui.html
+- MariaDB Database (Kết nối DBeaver / Navicat):
+    localhost:3307  (User: root / Pass: sapassword / DB: ims)
+
+* Tài khoản đăng nhập hệ thống PIMS (Xác thực 2 bước Email + OTP):
+1. Admin (Quản trị viên toàn quyền):
+   - Email: admin@pims.local
+   - Password: Admin@123
+2. Nhân viên kho (Lập phiếu nhập/xuất, duyệt lệnh):
+   - Email: user01@pims.local
+   - Password: Admin@123
+3. Kiểm soát viên (Khóa/mở sổ tháng):
+   - Email: controller01@pims.local
+   - Password: Admin@123
+4. Camunda Cockpit:
+   - Username: admin
+   - Password: Admin@123
+
+LƯU Ý LẤY MÃ OTP NHANH KHI ĐĂNG NHẬP TRÊN LAPTOP / LOCAL:
+Khi bấm "Tiếp tục" ở màn hình đăng nhập, mở terminal gõ:
+      docker compose logs --tail=10 backend
+Mã OTP 6 số sẽ hiển thị ngay trong log để bạn nhập vào web.
+
+--------------------------------------------------------------------------------
+5. CÁC LỆNH QUẢN TRỊ DOCKER THƯỜNG DÙNG
+--------------------------------------------------------------------------------
+
+- Xem log toàn bộ hệ thống:
+    docker compose logs -f
+
+- Xem log riêng Backend:
+    docker compose logs -f backend
+
+- Xem log riêng Frontend Nginx:
+    docker compose logs -f frontend
+
+- Dừng toàn bộ hệ thống:
+    docker compose down
+
+- Khởi động lại khi vừa sửa code Frontend:
+    docker compose up -d --build frontend
+
+- Khởi động lại khi vừa sửa code Backend:
+    docker compose up -d --build backend
+
+- Reload Nginx không cần restart container:
+    docker exec pims-frontend nginx -s reload
+
+- Truy cập trực tiếp vào Database MariaDB bằng dòng lệnh:
+    docker exec -it pims-database mariadb -u root -psapassword ims
+
+- Sao lưu (Backup) Database ra file:
+    docker exec -i pims-database mariadb-dump -u root -psapassword ims > backup.sql
+
+- Phục hồi (Restore) Database từ file:
+    docker exec -i pims-database mariadb -u root -psapassword ims < backup.sql
+
+--------------------------------------------------------------------------------
+6. HƯỚNG DẪN TRIỂN KHAI LÊN LINUX HOST (UBUNTU / DEBIAN / TIGERLAB)
+--------------------------------------------------------------------------------
+
+Khi triển khai lên máy chủ Linux thật (như máy chủ Tigerlab01):
+
+Bước 1: Cài đặt Docker trên Linux
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    sudo usermod -aG docker $USER
+
+Bước 2: Clone source code về máy chủ
+    git clone https://gitlab.com/Tigerlab03/pims-managemanet.git
+    cd pims-managemanet
+    cp .env.example .env
+
+Bước 3: Cấu hình biến môi trường trên Linux
+    nano .env
+    - Thay đổi JWT_SECRET thành chuỗi bảo mật ngẫu nhiên.
+    - Cập nhật CORS_ALLOWED_ORIGINS trỏ về IP hoặc Domain của máy chủ Linux.
+
+Bước 4: Khởi chạy trên Linux
+    docker compose up -d --build
+
+Bước 5: Kiểm tra trạng thái
+    docker compose ps
+
+================================================================================
+Tài liệu biên soạn phục vụ đồ án thực tập SAIGONBANK PIMS
+================================================================================

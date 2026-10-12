@@ -81,7 +81,7 @@ public class SecurityConfig {
                             "/api/engine/**",
                             "/api/camunda/**"
                     ).permitAll()
-                    .requestMatchers("/api/auth/login", "/api/auth/verify-otp").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/verify-otp", "/api/auth/logout").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/products").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")

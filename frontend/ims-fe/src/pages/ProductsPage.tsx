@@ -215,25 +215,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
 
       {/* Page Hero */}
       <div className="page-hero mb-4">
-        <div className="row align-items-center g-3">
-          <div className="col">
-            <div className="page-hero-badge"><i className="bi bi-box-seam" aria-hidden="true" /> Danh mục hàng hóa</div>
-            <h2 className="mb-1">Danh Mục Ấn Phẩm &amp; Văn Phòng Phẩm</h2>
-            <p>Quản lý danh sách mã ấn chỉ, tài sản, VPP &amp; vật liệu khác — tổng <strong className="text-white">{totalElements}</strong> bản ghi</p>
-          </div>
-          {isAdmin && (
-            <div className="col-auto">
-              <button
-                type="button"
-                className="btn btn-gold fw-semibold d-flex align-items-center gap-2 rounded-pill px-4"
-                style={{ boxShadow: '0 4px 14px rgba(34,197,94,0.4)' }}
-                onClick={handleOpenCreateModal}
-              >
-                <i className="bi bi-plus-circle" aria-hidden="true" /> Thêm Hàng Hóa Mới
-              </button>
-            </div>
-          )}
-        </div>
+        <div className="page-hero-badge"><i className="bi bi-box-seam" aria-hidden="true" /> Danh mục hàng hóa</div>
+        <h2 className="mb-1">Danh Mục Ấn Phẩm &amp; Văn Phòng Phẩm</h2>
+        <p>Quản lý danh sách mã ấn chỉ, tài sản, VPP &amp; vật liệu khác — tổng <strong className="text-white">{totalElements}</strong> bản ghi</p>
       </div>
 
       {/* Banner cảnh báo nếu còn mã hàng cũ */}
@@ -301,6 +285,25 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
 
       {/* Product Data Table */}
       <div className="card shadow-sm border-0 mb-4">
+        <div className="card-header bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div className="d-flex align-items-center gap-2">
+            <h5 className="fw-bold mb-0" style={{ color: 'var(--sgb-navy-900)', fontSize: '1.05rem' }}>
+              <i className="bi bi-boxes me-2 text-primary" aria-hidden="true" />Danh Sách Hàng Hóa
+            </h5>
+            <span className="badge bg-light text-secondary border fw-medium px-2 py-1" style={{ fontSize: '0.78rem' }}>
+              {totalElements} bản ghi
+            </span>
+          </div>
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn btn-gold fw-semibold d-flex align-items-center gap-2 rounded-pill px-4"
+              onClick={handleOpenCreateModal}
+            >
+              <i className="bi bi-plus-circle" aria-hidden="true" /> Thêm Hàng Hóa Mới
+            </button>
+          )}
+        </div>
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
             <thead className="table-light">

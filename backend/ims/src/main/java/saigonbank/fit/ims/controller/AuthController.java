@@ -1,7 +1,10 @@
 package saigonbank.fit.ims.controller;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -16,6 +19,7 @@ import saigonbank.fit.ims.dto.response.JwtResponse;
 import saigonbank.fit.ims.dto.response.UserResponse;
 import saigonbank.fit.ims.service.AuthService;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -33,12 +37,36 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("OTP đã được gửi đến email của bạn", response));
     }
 
-    // Bước 2: Xác thực OTP & cấp JWT
+
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<JwtResponse>> verifyOtp(
-            @Valid @RequestBody VerifyOtpRequest request) {
+            @Valid @RequestBody VerifyOtpRequest request,
+            HttpServletResponse httpServletResponse) {
         JwtResponse response = authService.verifyOtp(request.getEmail(), request.getOtpCode());
+
+        ResponseCookie cookie = ResponseCookie.from("pims_token", response.getToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ofHours(3))
+                .sameSite("Lax")
+                .build();
+        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", response));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse httpServletResponse) {
+        ResponseCookie cookie = ResponseCookie.from("pims_token", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
     }
 
     @PostMapping("/register")

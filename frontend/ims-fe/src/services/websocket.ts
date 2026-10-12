@@ -13,6 +13,10 @@ class ActivitySocketService {
 
   private getSocketUrl(): string {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8085/api';
+    if (!apiUrl.startsWith('http')) {
+      const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${wsProto}://${window.location.host}/ws/activity`;
+    }
     const base = apiUrl.replace(/\/api\/?$/, '');
     const wsProto = base.startsWith('https') ? 'wss' : 'ws';
     const host = base.replace(/^https?:\/\//, '');

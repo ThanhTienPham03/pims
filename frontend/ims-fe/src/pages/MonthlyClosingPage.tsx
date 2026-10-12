@@ -454,7 +454,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                             onClick={() => handleUnlock(c.year, c.month)}
                             disabled={actionLoading}
                           >
-                            <i className="bi bi-unlock-fill" aria-hidden="true" /> Mở khóa
+                            <i className="bi bi-unlock-fill" aria-hidden="true" /> Mở
                           </button>
                         ) : (
                           <button
@@ -467,7 +467,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                             onClick={() => handleLock(c.year, c.month)}
                             disabled={actionLoading}
                           >
-                            <i className="bi bi-lock-fill" aria-hidden="true" /> Khóa sổ
+                            <i className="bi bi-lock-fill" aria-hidden="true" /> Khóa
                           </button>
                         )}
                       </td>

@@ -301,26 +301,12 @@ export const UsersPage: React.FC<UsersPageProps> = ({ userRoles, showToast }) =>
     <div className="animate-fade-in">
       {/* Page Hero */}
       <div className="page-hero mb-4">
-        <div className="row align-items-center g-3">
-          <div className="col">
-            <div className="page-hero-badge"><i className="bi bi-person-gear" aria-hidden="true" /> Quản trị người dùng</div>
-            <h2 className="mb-1">Quản Lý Tài Khoản &amp; Phân Quyền Nhân Viên</h2>
-            <p>
-              Đăng ký tài khoản nhân viên mới, phân quyền truy cập chức năng hệ thống (USER, CONTROLLER, ADMIN) — tổng{' '}
-              <strong className="text-white">{totalElements}</strong> tài khoản
-            </p>
-          </div>
-          <div className="col-auto">
-            <button
-              type="button"
-              className="btn btn-gold fw-semibold d-flex align-items-center gap-2 rounded-pill px-4"
-              style={{ boxShadow: '0 4px 14px rgba(34,197,94,0.4)' }}
-              onClick={handleOpenCreate}
-            >
-              <i className="bi bi-person-plus" aria-hidden="true" /> Cấp Tài Khoản Mới
-            </button>
-          </div>
-        </div>
+        <div className="page-hero-badge"><i className="bi bi-person-gear" aria-hidden="true" /> Quản trị người dùng</div>
+        <h2 className="mb-1">Quản Lý Tài Khoản &amp; Phân Quyền Nhân Viên</h2>
+        <p>
+          Đăng ký tài khoản nhân viên mới, phân quyền truy cập chức năng hệ thống (USER, CONTROLLER, ADMIN) — tổng{' '}
+          <strong className="text-white">{totalElements}</strong> tài khoản
+        </p>
       </div>
 
       {/* KPI Stats Overview */}
@@ -464,6 +450,23 @@ export const UsersPage: React.FC<UsersPageProps> = ({ userRoles, showToast }) =>
 
       {/* Users Table */}
       <div className="card shadow-sm border-0 mb-4 overflow-hidden">
+        <div className="card-header bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div className="d-flex align-items-center gap-2">
+            <h5 className="fw-bold mb-0" style={{ color: 'var(--sgb-navy-900)', fontSize: '1.05rem' }}>
+              <i className="bi bi-people me-2 text-primary" aria-hidden="true" />Danh Sách Tài Khoản Nhân Viên
+            </h5>
+            <span className="badge bg-light text-secondary border fw-medium px-2 py-1" style={{ fontSize: '0.78rem' }}>
+              {totalElements} tài khoản
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-gold fw-semibold d-flex align-items-center gap-2 rounded-pill px-4"
+            onClick={handleOpenCreate}
+          >
+            <i className="bi bi-person-plus" aria-hidden="true" /> Cấp Tài Khoản Mới
+          </button>
+        </div>
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
             <thead>

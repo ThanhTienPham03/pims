@@ -92,23 +92,9 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
 
       {/* Page Hero */}
       <div className="page-hero mb-4">
-        <div className="row align-items-center g-3">
-          <div className="col">
-            <div className="page-hero-badge"><i className="bi bi-box-arrow-in-down" aria-hidden="true" /> Quản lý nhập kho</div>
-            <h2 className="mb-1">Phiếu Nhập Kho Ấn Phẩm &amp; VPP</h2>
-            <p>Theo dõi và lập phiếu nhập ấn chỉ, hóa đơn, ấn phẩm &amp; văn phòng phẩm — tổng <strong className="text-white">{totalElements}</strong> phiếu</p>
-          </div>
-          <div className="col-auto">
-            <button
-              type="button"
-              className="btn btn-gold fw-semibold d-flex align-items-center gap-2 rounded-pill px-4"
-              style={{ boxShadow: '0 4px 14px rgba(34,197,94,0.4)' }}
-              onClick={() => onNavigateCreate()}
-            >
-              <i className="bi bi-plus-circle" aria-hidden="true" /> Lập Phiếu Nhập Mới
-            </button>
-          </div>
-        </div>
+        <div className="page-hero-badge"><i className="bi bi-box-arrow-in-down" aria-hidden="true" /> Quản lý nhập kho</div>
+        <h2 className="mb-1">Phiếu Nhập Kho Ấn Phẩm &amp; VPP</h2>
+        <p>Theo dõi và lập phiếu nhập ấn chỉ, hóa đơn, ấn phẩm &amp; văn phòng phẩm — tổng <strong className="text-white">{totalElements}</strong> phiếu</p>
       </div>
 
       {/* Filter Bar */}
@@ -153,6 +139,23 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
 
       {/* Import Table */}
       <div className="card shadow-sm border-0 mb-4">
+        <div className="card-header bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div className="d-flex align-items-center gap-2">
+            <h5 className="fw-bold mb-0" style={{ color: 'var(--sgb-navy-900)', fontSize: '1.05rem' }}>
+              <i className="bi bi-box-arrow-in-down me-2 text-primary" aria-hidden="true" />Danh Sách Phiếu Nhập Kho
+            </h5>
+            <span className="badge bg-light text-secondary border fw-medium px-2 py-1" style={{ fontSize: '0.78rem' }}>
+              {totalElements} phiếu
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-gold fw-semibold d-flex align-items-center gap-2 rounded-pill px-4"
+            onClick={() => onNavigateCreate()}
+          >
+            <i className="bi bi-plus-circle" aria-hidden="true" /> Lập Phiếu Nhập Mới
+          </button>
+        </div>
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
             <thead className="table-light">
@@ -214,10 +217,10 @@ export const ImportsPage: React.FC<ImportsPageProps> = ({ showToast, onNavigateC
                         <button
                           type="button"
                           className="btn btn-outline-primary btn-sm"
-                          title="In phiếu"
+                          title="Xuất PDF / In phiếu"
                           onClick={() => setPrintTarget(item)}
                         >
-                          <i className="bi bi-printer" aria-hidden="true" />
+                          <i className="bi bi-file-earmark-pdf" aria-hidden="true" />
                         </button>
                         {isAdmin && item.trangThai === 'HOAN_THANH' && (
                           <button
