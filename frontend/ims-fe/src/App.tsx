@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -19,23 +20,37 @@ import type { JwtResponse } from './types';
 import './App.css';
 
 export function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [currentUser, setCurrentUser] = useState<JwtResponse | null>(() => {
-    // Kiểm tra token hết hạn ngay khi load
+    // Kiểm tra phiên hết hạn ngay khi load
     if (authService.isTokenExpired()) {
       authService.logout();
-      localStorage.removeItem('pims_user');
       return null;
     }
-    const savedUser = authService.getCurrentUser();
-    return savedUser && savedUser.token ? savedUser : null;
+    return authService.getCurrentUser();
   });
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
     const id = Date.now().toString() + Math.random().toString();
     setToasts((prev) => [...prev, { id, message, type }]);
   }, []);
+
+  // Xác định activeTab trên Sidebar dựa trên URL hiện tại
+  const activeTab = useMemo(() => {
+    const p = location.pathname;
+    if (p.startsWith('/products')) return 'products';
+    if (p.startsWith('/imports')) return 'imports';
+    if (p.startsWith('/exports')) return 'exports';
+    if (p.startsWith('/inventory')) return 'inventory';
+    if (p.startsWith('/kkts')) return 'kkts';
+    if (p.startsWith('/closings')) return 'closings';
+    if (p.startsWith('/users')) return 'users';
+    if (p.startsWith('/activity')) return 'activity';
+    return 'dashboard';
+  }, [location.pathname]);
 
   // WebSocket Realtime for Admin
   useEffect(() => {
@@ -60,13 +75,13 @@ export function App() {
       if (log.action === 'LOGIN' && log.username === currentUser.username) {
         return;
       }
-      const prefix = log.action === 'CREATE' ? '🟢 Tạo mới: '
-                   : log.action === 'CANCEL' ? '🔴 Hủy bỏ: '
-                   : log.action === 'DELETE' ? '❌ Xóa: '
-                   : log.action === 'UPDATE' ? '✏️ Cập nhật: '
-                   : log.action === 'LOCK_MONTH' ? '🔒 Khóa sổ: '
-                   : log.action === 'UNLOCK_MONTH' ? '🔓 Mở khóa: '
-                   : '🔔 ';
+      const prefix = log.action === 'CREATE' ? ' Tạo mới: '
+        : log.action === 'CANCEL' ? ' Hủy bỏ: '
+          : log.action === 'DELETE' ? ' Xóa: '
+            : log.action === 'UPDATE' ? ' Cập nhật: '
+              : log.action === 'LOCK_MONTH' ? ' Khóa sổ: '
+                : log.action === 'UNLOCK_MONTH' ? ' Mở khóa: '
+                  : ' ';
       showToast(`${prefix}${log.description || `${log.username} đã thực hiện ${log.action}`}`, 'info');
     });
 
@@ -75,7 +90,27 @@ export function App() {
     };
   }, [currentUser, showToast]);
 
-  // Kiểm tra token hết hạn định kỳ (mỗi 60 giây)
+  // Xác thực phiên làm việc thực tế với backend qua HttpOnly Cookie khi có thông tin người dùng
+  useEffect(() => {
+    const savedUser = authService.getCurrentUser();
+    if (!savedUser) {
+      // Người dùng chưa đăng nhập hoặc đã đăng xuất, không tự động gọi getMe
+      return;
+    }
+
+    authService.getMe()
+      .then((user) => {
+        setCurrentUser(user);
+      })
+      .catch(() => {
+        // Nếu cookie không còn hợp lệ hoặc đã hết hạn trên server
+        authService.logout();
+        setCurrentUser(null);
+        navigate('/login');
+      });
+  }, [navigate]);
+
+  // Kiểm tra phiên hết hạn định kỳ (mỗi 60 giây)
   useEffect(() => {
     if (!currentUser) return;
     const interval = setInterval(() => {
@@ -83,74 +118,76 @@ export function App() {
         clearInterval(interval);
         activitySocket.disconnect();
         authService.logout();
-        localStorage.removeItem('pims_user');
         setCurrentUser(null);
+        navigate('/login');
         showToast('Phiên làm việc đã hết hạn (3 giờ). Vui lòng đăng nhập lại.', 'warning');
       }
     }, 60_000);
     return () => clearInterval(interval);
-  }, [currentUser, showToast]);
+  }, [currentUser, showToast, navigate]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
       activitySocket.disconnect();
+      authService.logout();
       setCurrentUser(null);
+      navigate('/login');
       showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
     };
 
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
-  }, [showToast]);
+  }, [showToast, navigate]);
 
   const handleDismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     activitySocket.disconnect();
-    authService.logout();
+    await authService.logout();
     setCurrentUser(null);
-    setActiveTab('dashboard');
+    navigate('/login');
     showToast('Đã đăng xuất khỏi hệ thống', 'info');
+  };
+
+  const handleDashboardNavigate = (target: string) => {
+    if (target === 'imports-create') {
+      navigate('/imports/create');
+    } else if (target === 'exports-create') {
+      navigate('/exports/create');
+    } else if (target.startsWith('/')) {
+      navigate(target);
+    } else {
+      navigate(`/${target}`);
+    }
   };
 
   if (!currentUser) {
     return (
       <>
         <Toast toasts={toasts} onDismiss={handleDismissToast} />
-        <LoginPage onLoginSuccess={(u) => setCurrentUser(u)} showToast={showToast} />
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <LoginPage
+                onLoginSuccess={(u) => {
+                  setCurrentUser(u);
+                  navigate('/dashboard');
+                }}
+                showToast={showToast}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
       </>
     );
   }
 
-  const renderActiveTab = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <DashboardPage onNavigate={setActiveTab} showToast={showToast} />;
-      case 'products':
-        return <ProductsPage userRoles={currentUser.roles || []} showToast={showToast} />;
-      case 'imports':
-        return <ImportsPage showToast={showToast} onNavigateCreate={() => setActiveTab('imports-create')} />;
-      case 'imports-create':
-        return <CreateImportPage showToast={showToast} onNavigateBack={() => setActiveTab('imports')} />;
-      case 'exports':
-        return <ExportsPage showToast={showToast} onNavigateCreate={() => setActiveTab('exports-create')} />;
-      case 'exports-create':
-        return <CreateExportPage showToast={showToast} onNavigateBack={() => setActiveTab('exports')} />;
-      case 'inventory':
-        return <InventoryPage showToast={showToast} />;
-      case 'kkts':
-        return <KktsPage showToast={showToast} />;
-      case 'closings':
-        return <MonthlyClosingPage userRoles={currentUser.roles || []} showToast={showToast} />;
-      case 'users':
-        return <UsersPage userRoles={currentUser.roles || []} showToast={showToast} />;
-      case 'activity':
-        return <ActivityPage userRoles={currentUser.roles || []} showToast={showToast} />;
-      default:
-        return <DashboardPage onNavigate={setActiveTab} showToast={showToast} />;
-    }
-  };
+  const isController = currentUser.roles?.includes('CONTROLLER') || currentUser.roles?.includes('ADMIN');
+  const isAdmin = currentUser.roles?.includes('ADMIN');
 
   return (
     <>
@@ -158,10 +195,58 @@ export function App() {
       <MainLayout
         user={currentUser}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => navigate(`/${tab}`)}
         onLogout={handleLogout}
       >
-        {renderActiveTab()}
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={<DashboardPage onNavigate={handleDashboardNavigate} showToast={showToast} />}
+          />
+          <Route
+            path="/products"
+            element={<ProductsPage userRoles={currentUser.roles || []} showToast={showToast} />}
+          />
+          <Route
+            path="/imports"
+            element={<ImportsPage showToast={showToast} onNavigateCreate={() => navigate('/imports/create')} />}
+          />
+          <Route
+            path="/imports/create"
+            element={<CreateImportPage showToast={showToast} onNavigateBack={() => navigate('/imports')} />}
+          />
+          <Route
+            path="/exports"
+            element={<ExportsPage showToast={showToast} onNavigateCreate={() => navigate('/exports/create')} />}
+          />
+          <Route
+            path="/exports/create"
+            element={<CreateExportPage showToast={showToast} onNavigateBack={() => navigate('/exports')} />}
+          />
+          <Route
+            path="/inventory"
+            element={<InventoryPage showToast={showToast} />}
+          />
+          <Route
+            path="/kkts"
+            element={<KktsPage showToast={showToast} />}
+          />
+          <Route
+            path="/closings"
+            element={isController ? <MonthlyClosingPage userRoles={currentUser.roles || []} showToast={showToast} /> : <Navigate to="/dashboard" replace />}
+          />
+          <Route
+            path="/users"
+            element={isAdmin ? <UsersPage userRoles={currentUser.roles || []} showToast={showToast} /> : <Navigate to="/dashboard" replace />}
+          />
+          <Route
+            path="/activity"
+            element={isAdmin ? <ActivityPage userRoles={currentUser.roles || []} showToast={showToast} /> : <Navigate to="/dashboard" replace />}
+          />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </MainLayout>
     </>
   );

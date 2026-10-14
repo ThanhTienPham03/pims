@@ -1,29 +1,25 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8085/api';
 
 class ApiClient {
-  private getToken(): string | null {
-    return localStorage.getItem('pims_token');
+  public clearAuth() {
+    localStorage.removeItem('pims_user');
+    localStorage.removeItem('pims_token');
+    localStorage.removeItem('pims_token_expiry');
+    localStorage.removeItem('pims_session_expiry');
   }
 
-  public setToken(token: string) {
-    localStorage.setItem('pims_token', token);
+  public setToken(_token: string) {
+    // Không lưu token vào localStorage, backend đã thiết lập HttpOnly Cookie
   }
 
   public removeToken() {
-    localStorage.removeItem('pims_token');
-    localStorage.removeItem('pims_user');
-    localStorage.removeItem('pims_token_expiry');
+    this.clearAuth();
   }
 
   private getHeaders(): HeadersInit {
-    const headers: Record<string, string> = {
+    return {
       'Content-Type': 'application/json',
     };
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
   }
 
   public async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
@@ -96,8 +92,8 @@ class ApiClient {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
       this.removeToken();
-      // Do not dispatch unauthorized event if it's a login attempt
-      if (!response.url.includes('/auth/login')) {
+      // Do not dispatch unauthorized event if it's a login or OTP verification attempt
+      if (!response.url.includes('/auth/login') && !response.url.includes('/auth/verify-otp')) {
         window.dispatchEvent(new Event('auth:unauthorized'));
       }
     }

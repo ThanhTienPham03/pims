@@ -13,4 +13,7 @@ public class LoginRequest {
 
     @NotBlank(message = "Mật khẩu không được để trống")
     private String password;
+
+    /** Nếu true, bắt buộc sinh OTP mới và gửi lại email bất kể có OTP pending */
+    private boolean forceResend;
 }

@@ -232,6 +232,7 @@ public class CatalogProcessDelegate implements JavaDelegate {
             throw new BpmnError("ERR_INVALID_CATALOG_DATA", "Thiếu productId khi kiểm tra phát sinh.");
         }
         boolean coPhatSinh = productService.hasTransactions(productId);
+        execution.setVariable("daPhatSinh", coPhatSinh);
         execution.setVariable("coPhatSinhGiaoDich", coPhatSinh);
         log.info("[Task_KiemTraPhatSinhGiaoDich] Hàng hóa ID {} có phát sinh giao dịch: {}", productId, coPhatSinh);
     }
@@ -239,16 +240,24 @@ public class CatalogProcessDelegate implements JavaDelegate {
     private void handleChuyenTrangThaiNgung(DelegateExecution execution, String username) {
         Long productId = getLong(execution, "productId");
         if (productId != null) {
-            productService.deactivateProduct(productId);
-            log.info("[Task_ChuyenTrangThaiNgung] Đã chuyển mã hàng ID {} sang NGƯNG SỬ DỤNG.", productId);
+            try {
+                productService.deactivateProduct(productId);
+                log.info("[Task_ChuyenTrangThaiNgung] Đã chuyển mã hàng ID {} sang NGƯNG SỬ DỤNG.", productId);
+            } catch (Exception e) {
+                log.info("[Task_ChuyenTrangThaiNgung] Bỏ qua chuyển trạng thái ngưng cho ID {}: {}", productId, e.getMessage());
+            }
         }
     }
 
     private void handleXoaHoanToanMaHang(DelegateExecution execution, String username) {
         Long productId = getLong(execution, "productId");
         if (productId != null) {
-            productService.deleteProduct(productId);
-            log.info("[Task_XoaHoanToanMaHang] Đã xóa hoàn toàn mã hàng ID {} (chưa có phát sinh).", productId);
+            try {
+                productService.deleteProduct(productId);
+                log.info("[Task_XoaHoanToanMaHang] Đã xóa hoàn toàn mã hàng ID {} (chưa có phát sinh).", productId);
+            } catch (Exception e) {
+                log.info("[Task_XoaHoanToanMaHang] Bỏ qua xóa cho ID {}: {}", productId, e.getMessage());
+            }
         }
     }
 

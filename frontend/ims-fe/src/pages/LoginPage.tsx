@@ -122,12 +122,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, showToast 
   const [maskedEmail, setMaskedEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [otpLoading, setOtpLoading] = useState(false);
-  const [, setCountdownKey] = useState(0);
+  const [otpDuration, setOtpDuration] = useState(5 * 60);
   const [otpExpired, setOtpExpired] = useState(false);
 
   const handleOtpExpire = () => setOtpExpired(true);
   const { remaining, display: countdownDisplay } = useCountdown(
-    otpExpired ? 0 : 5 * 60,
+    otpExpired ? 0 : otpDuration,
     handleOtpExpire
   );
 
@@ -139,13 +139,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, showToast 
     }
     try {
       setLoading(true);
-      const res = await authService.initiateLogin(email.trim(), password);
+      const res = await authService.initiateLogin(email.trim(), password, false);
       setMaskedEmail(res.maskedEmail);
       setOtpExpired(false);
       setOtpDigits(['', '', '', '', '', '']);
-      setCountdownKey((k) => k + 1);
+      if (res.expiresInSeconds && res.expiresInSeconds > 0) {
+        setOtpDuration(res.expiresInSeconds);
+      } else {
+        setOtpDuration(5 * 60);
+      }
       setStep(2);
-      showToast(`OTP đã gửi đến ${res.maskedEmail}`, 'info');
+      if (res.isNewOtp === false) {
+        showToast('Mã OTP đã gửi trước đó vẫn còn hiệu lực. Vui lòng kiểm tra hộp thư.', 'info');
+      } else {
+        showToast(`OTP đã gửi đến ${res.maskedEmail}`, 'info');
+      }
     } catch (err: any) {
       showToast(err.message || 'Đăng nhập thất bại. Kiểm tra lại thông tin.', 'error');
     } finally {
@@ -180,12 +188,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, showToast 
   const handleResend = async () => {
     try {
       setLoading(true);
-      const res = await authService.initiateLogin(email.trim(), password);
+      const res = await authService.initiateLogin(email.trim(), password, true);
       setMaskedEmail(res.maskedEmail);
       setOtpExpired(false);
       setOtpDigits(['', '', '', '', '', '']);
-      setCountdownKey((k) => k + 1);
-      showToast(`Đã gửi lại OTP đến ${res.maskedEmail}`, 'info');
+      setOtpDuration(res.expiresInSeconds && res.expiresInSeconds > 0 ? res.expiresInSeconds : 5 * 60);
+      showToast(`Đã gửi lại OTP mới đến ${res.maskedEmail}`, 'info');
     } catch (err: any) {
       showToast(err.message || 'Gửi lại OTP thất bại.', 'error');
     } finally {

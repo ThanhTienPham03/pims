@@ -23,19 +23,36 @@ import type {
 } from '../types';
 
 export const authService = {
-  initiateLogin: async (email: string, password: string): Promise<{ maskedEmail: string; message: string }> => {
-    const data = await api.post<{ maskedEmail: string; message: string }>('/auth/login', { email, password });
+  initiateLogin: async (
+    email: string,
+    password: string,
+    forceResend: boolean = false
+  ): Promise<{ maskedEmail: string; message: string; isNewOtp?: boolean; expiresInSeconds?: number }> => {
+    const data = await api.post<{ maskedEmail: string; message: string; isNewOtp?: boolean; expiresInSeconds?: number }>(
+      '/auth/login',
+      { email, password, forceResend }
+    );
     return data;
   },
 
   verifyOtp: async (email: string, otpCode: string): Promise<JwtResponse> => {
     const data = await api.post<JwtResponse>('/auth/verify-otp', { email, otpCode });
-    if (data && data.token) {
-      api.setToken(data.token);
-      // Lưu hạn token 3 giờ
+    if (data) {
+      // Backend đã tự động đính kèm HttpOnly Cookie "pims_token"
+      // Lưu thông tin người dùng (không chứa token) để hiển thị giao diện tức thời
+      const { token: _token, ...userProfile } = data;
       const expiryTime = Date.now() + 3 * 60 * 60 * 1000;
-      localStorage.setItem('pims_token_expiry', String(expiryTime));
-      localStorage.setItem('pims_user', JSON.stringify(data));
+      localStorage.setItem('pims_session_expiry', String(expiryTime));
+      localStorage.setItem('pims_user', JSON.stringify(userProfile));
+    }
+    return data;
+  },
+
+  getMe: async (): Promise<JwtResponse> => {
+    const data = await api.get<JwtResponse>('/auth/me');
+    if (data) {
+      const { token: _token, ...userProfile } = data;
+      localStorage.setItem('pims_user', JSON.stringify(userProfile));
     }
     return data;
   },
@@ -51,18 +68,20 @@ export const authService = {
   },
 
   isTokenExpired: (): boolean => {
-    const expiry = localStorage.getItem('pims_token_expiry');
-    if (!expiry) return true;
+    const expiry = localStorage.getItem('pims_session_expiry');
+    if (!expiry) return false;
     return Date.now() > parseInt(expiry, 10);
   },
 
   logout: async () => {
+    // 1. Xóa ngay lập tức dữ liệu phiên ở client để tránh race condition khi refresh
+    api.removeToken();
     try {
+      // 2. Gửi yêu cầu backend xóa HttpOnly Cookie pims_token
       await api.post('/auth/logout');
     } catch {
-      // Bỏ qua lỗi nếu mạng rớt, vẫn xóa token cục bộ
+      // Bỏ qua lỗi nếu mạng rớt
     }
-    api.removeToken();
   },
 };
 

@@ -13,4 +13,6 @@ public class InitiateLoginResponse {
     /** Email đã che (ví dụ: ng***@gmail.com) */
     private String maskedEmail;
     private String message;
+    private boolean isNewOtp;
+    private long expiresInSeconds;
 }

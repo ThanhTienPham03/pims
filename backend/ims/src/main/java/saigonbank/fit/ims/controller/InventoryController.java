@@ -28,6 +28,11 @@ public class InventoryController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getInventorySummary() {
+        return ResponseEntity.ok(ApiResponse.success(inventoryService.getInventorySummary()));
+    }
+
     @GetMapping("/{productId}")
     public ResponseEntity<ApiResponse<InventoryResponse>> getInventoryByProduct(@PathVariable Long productId) {
         InventoryResponse response = inventoryService.getInventoryByProduct(productId);

@@ -90,6 +90,17 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        String msg = String.format("Tham số '%s' nhận giá trị '%s' không đúng kiểu dữ liệu yêu cầu (%s)",
+                ex.getName(), ex.getValue(),
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "không xác định");
+        log.warn("Lỗi sai kiểu tham số: {} trên {}", msg, request.getRequestURI());
+        return buildError(HttpStatus.BAD_REQUEST, "METHOD_ARGUMENT_TYPE_MISMATCH", msg, request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception occurred: ", ex);

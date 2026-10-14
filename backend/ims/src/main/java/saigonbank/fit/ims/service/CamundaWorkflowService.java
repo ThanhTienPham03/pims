@@ -318,6 +318,9 @@ public class CamundaWorkflowService {
             Map<String, Object> vars = new HashMap<>(variables);
             vars.put("loaiThaoTac", loaiThaoTac);
             vars.put("username", username);
+            vars.putIfAbsent("daPhatSinh", false);
+            vars.putIfAbsent("tenGanGiong", false);
+            vars.putIfAbsent("tenTrungHoanToan", false);
 
             ProcessInstance pi = runtimeService.startProcessInstanceByKey(
                     "Process_QuanLyDanhMucAnPham", bKey, vars);

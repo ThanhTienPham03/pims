@@ -11,12 +11,14 @@ spring:
     active: dev
 
   config:
-    import: optional:file:.env[.properties]
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../../.env[.properties]
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:mariadb://localhost:${DB_PORT:3306}/${DB_NAME:ims}?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:sapassword}
     driver-class-name: org.mariadb.jdbc.Driver
     hikari:
       pool-name: PIMS-HikariPool
@@ -44,7 +46,7 @@ spring:
   # JPA / Hibernate
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
+      ddl-auto: ${JPA_DDL_AUTO:none}
     show-sql: false
     properties:
       hibernate:
@@ -102,7 +104,7 @@ camunda:
       password: ${CAMUNDA_ADMIN_PASSWORD:Admin@123}
       first-name: Admin
       last-name: Saigonbank
-      email: admin@pims.local
+      email: admin@saigonbank.com.vn
     filter:
       create: All Tasks
     webapp:

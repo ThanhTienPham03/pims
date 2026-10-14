@@ -31,7 +31,7 @@ public class InventoryTransactionDetail {
     private Product product;
 
     @Column(name = "product_group_code", nullable = false, length = 10)
-    private String productGroupCode; // nhom_hang (or category_code)
+    private String productGroupCode; // nhom_hang
 
     @Column(name = "quantity", nullable = false, precision = 18, scale = 3)
     private BigDecimal quantity;

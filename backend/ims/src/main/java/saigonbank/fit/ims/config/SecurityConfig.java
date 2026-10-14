@@ -106,7 +106,7 @@ public class SecurityConfig {
                 .map(s -> s.trim())
                 .filter(StringUtils::hasText)
                 .toList();
-        config.setAllowedOrigins(origins);
+        config.setAllowedOriginPatterns(origins);
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

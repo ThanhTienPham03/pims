@@ -37,14 +37,6 @@ public class ProductService {
     private final InventoryTransactionDetailRepository inventoryTransactionDetailRepository;
     private final AuditLogService auditLogService;
 
-    /**
-     * Tự động sinh mã hàng hóa tiếp theo theo nhóm hàng:
-     * + ACTT: 32F.9020100.STT
-     * + VPP:  32F.7100001.STT
-     * + ACQT: 32F.5010000.STT
-     * + VLK:  32F.9080117.STT
-     * Ví dụ: 32F.9020100.001, 32F.7100001.001
-     */
     @Transactional(readOnly = true)
     public String generateNextMaSo(String nhomHang) {
         String prefix = getProductCodePrefix(nhomHang);
@@ -70,10 +62,6 @@ public class ProductService {
         return String.format("%s%03d", prefix, maxSeq + 1);
     }
 
-    /**
-     * Chuẩn hóa toàn bộ mã hàng cũ trong CSDL chưa theo cấu trúc 32F.xxxxxxx.STT.
-     * Tự động nhận diện nhóm hàng và bảo lưu số thứ tự hiện có nếu hợp lệ.
-     */
     @Transactional
     public int migrateAllLegacyProductCodes() {
         List<Product> products = productRepository.findAll();
@@ -100,7 +88,6 @@ public class ProductService {
 
             String prefix = getProductCodePrefix(groupCode);
 
-            // Giữ lại STT từ mã cũ nếu có (ví dụ: ACQT-002 -> 2, ACQT-003 -> 3, VPP-003 -> 3)
             java.util.regex.Matcher matcher = numPattern.matcher(currentMaSo.trim());
             int targetSeq = -1;
             if (matcher.find()) {

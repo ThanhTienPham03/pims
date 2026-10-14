@@ -6,11 +6,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// Bảng Kiểm kê tài sản theo kỳ (tháng/năm); averagePrice = endingAmount / endingQuantity
 @Entity
-@Table(name = "kkts",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"product_id", "year", "month"})
-)
+@Table(name = "kkts", uniqueConstraints = @UniqueConstraint(columnNames = { "product_id", "year", "month" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -71,12 +68,12 @@ public class Kkts {
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", insertable = false)
+    @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
     public void recalculate() {
         this.endingQuantity = openingQuantity.add(importQuantity).subtract(exportQuantity);
-        this.endingAmount   = openingAmount.add(importAmount).subtract(exportAmount);
+        this.endingAmount = openingAmount.add(importAmount).subtract(exportAmount);
 
         if (this.endingQuantity.compareTo(BigDecimal.ZERO) > 0) {
             this.averagePrice = this.endingAmount
@@ -89,32 +86,31 @@ public class Kkts {
 
     public void applyImport(BigDecimal qty, BigDecimal amount) {
         this.importQuantity = this.importQuantity.add(qty);
-        this.importAmount   = this.importAmount.add(amount);
+        this.importAmount = this.importAmount.add(amount);
         recalculate();
     }
 
     public void applyExport(BigDecimal qty, BigDecimal exportAmt) {
-        // Xuất hết tồn kho: dùng endingAmount thực tế để tránh sai lệch số học
         if (this.endingQuantity.compareTo(qty) == 0) {
             BigDecimal remainingAmount = this.endingAmount;
             this.exportQuantity = this.exportQuantity.add(qty);
-            this.exportAmount   = this.exportAmount.add(remainingAmount);
+            this.exportAmount = this.exportAmount.add(remainingAmount);
         } else {
             this.exportQuantity = this.exportQuantity.add(qty);
-            this.exportAmount   = this.exportAmount.add(exportAmt);
+            this.exportAmount = this.exportAmount.add(exportAmt);
         }
         recalculate();
     }
 
     public void reverseImport(BigDecimal qty, BigDecimal amount) {
         this.importQuantity = this.importQuantity.subtract(qty);
-        this.importAmount   = this.importAmount.subtract(amount);
+        this.importAmount = this.importAmount.subtract(amount);
         recalculate();
     }
 
     public void reverseExport(BigDecimal qty, BigDecimal amount) {
         this.exportQuantity = this.exportQuantity.subtract(qty);
-        this.exportAmount   = this.exportAmount.subtract(amount);
+        this.exportAmount = this.exportAmount.subtract(amount);
         recalculate();
     }
 }

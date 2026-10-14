@@ -115,7 +115,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
               Chốt Sổ Kỳ Kế Toán Hàng Tháng
             </h1>
             <p className="text-white mb-0" style={{ opacity: 0.65, fontSize: '0.95rem', maxWidth: 560 }}>
-              Kiểm soát và khóa kỳ nhập xuất ấn phẩm toàn hệ thống Saigonbank. Sau khi khóa, 
+              Kiểm soát và khóa kỳ nhập xuất ấn phẩm toàn hệ thống Saigonbank. Sau khi khóa,
               không thể tạo hoặc hủy phiếu nhập/xuất trong kỳ đó.
             </p>
           </div>
@@ -148,13 +148,13 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
               >
                 <span style={{ fontSize: '1.1rem' }}><i className="bi bi-calendar3" aria-hidden="true" /></span>
-                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
                   Kỳ gần nhất:{' '}
                   <span className="fw-semibold text-white">
                     {MONTH_NAMES[latestClosing.month]}/{latestClosing.year}
                   </span>
                   {' — '}
-                  <span className={latestClosing.isLocked ? 'text-danger' : 'text-success'}>
+                  <span style={{ color: latestClosing.isLocked ? '#ff6b6b' : '#51cf66', fontWeight: 600 }}>
                     {latestClosing.isLocked ? 'Đã khóa' : 'Đang mở'}
                   </span>
                 </div>
@@ -166,32 +166,25 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
 
       {isController && (
         <div
-          className="rounded-4 mb-4 p-4 border"
-          style={{ background: 'linear-gradient(135deg, #fff9f0 0%, #fffdf8 100%)', borderColor: '#F5A62340 !important' }}
+          className="card border-0 shadow-sm rounded-4 mb-4"
+          style={{ background: '#ffffff', border: '1px solid #edf2f7' }}
         >
-          <div className="row align-items-center g-3">
-            <div className="col-auto">
-              <div
-                className="d-flex align-items-center justify-content-center rounded-3"
-                style={{ width: 48, height: 48, background: 'rgba(245,166,35,0.12)', border: '1.5px solid rgba(245,166,35,0.3)' }}
-              >
-                <span style={{ fontSize: '1.4rem' }}><i className="bi bi-lightning-charge-fill" aria-hidden="true" /></span>
+          <div className="card-body p-3 px-md-4 py-md-3">
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-bold text-dark d-flex align-items-center gap-2" style={{ fontSize: '0.9rem' }}>
+                  <i className="bi bi-sliders text-primary" style={{ fontSize: '1.1rem' }} />
+                  Chọn kỳ thao tác:
+                </span>
               </div>
-            </div>
-            <div className="col">
-              <div className="fw-bold" style={{ color: '#7c4f00', fontSize: '0.9rem' }}>Thao tác nhanh — Khóa / Mở khóa kỳ kế toán</div>
-              <div className="text-muted" style={{ fontSize: '0.78rem', marginTop: 2 }}>
-                Chọn tháng và năm cần thao tác, sau đó bấm nút tương ứng. Hệ thống sẽ yêu cầu xác nhận trước khi thực hiện.
-              </div>
-            </div>
-            <div className="col-12 col-md-auto">
-              <div className="d-flex align-items-center gap-3 flex-wrap">
+
+              <div className="d-flex align-items-center gap-3 flex-wrap ms-auto">
                 {/* Month selector */}
                 <div className="d-flex align-items-center gap-2">
-                  <label className="fw-semibold text-secondary" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Tháng</label>
+                  <label className="fw-semibold text-secondary mb-0" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Tháng</label>
                   <select
                     className="form-select form-select-sm shadow-none"
-                    style={{ width: 130, borderColor: '#dee2e6', borderRadius: 8 }}
+                    style={{ width: 130, borderColor: '#dee2e6', borderRadius: 8, fontWeight: 500 }}
                     value={selectedMonth}
                     onChange={e => setSelectedMonth(Number(e.target.value))}
                   >
@@ -200,12 +193,13 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                     ))}
                   </select>
                 </div>
+
                 {/* Year selector */}
                 <div className="d-flex align-items-center gap-2">
-                  <label className="fw-semibold text-secondary" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Năm</label>
+                  <label className="fw-semibold text-secondary mb-0" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>Năm</label>
                   <select
                     className="form-select form-select-sm shadow-none"
-                    style={{ width: 130, borderColor: '#dee2e6', borderRadius: 8 }}
+                    style={{ width: 120, borderColor: '#dee2e6', borderRadius: 8, fontWeight: 500 }}
                     value={selectedYear}
                     onChange={e => setSelectedYear(Number(e.target.value))}
                   >
@@ -215,7 +209,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                   </select>
                 </div>
 
-                <div className="vr d-none d-md-block" style={{ height: 36 }} />
+                <div className="vr d-none d-md-block" style={{ height: 28 }} />
 
                 {/* Lock button */}
                 <button
@@ -225,7 +219,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                   onClick={() => handleLock(selectedYear, selectedMonth)}
                   style={{
                     background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
-                    border: 'none', color: '#fff', borderRadius: 10, padding: '8px 18px', fontSize: '0.875rem'
+                    border: 'none', color: '#fff', borderRadius: 8, padding: '7px 18px', fontSize: '0.85rem'
                   }}
                 >
                   {actionLoading
@@ -233,6 +227,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                     : <i className="bi bi-lock-fill" aria-hidden="true" />}
                   Khóa {MONTH_NAMES[selectedMonth]}/{selectedYear}
                 </button>
+
                 {/* Unlock button */}
                 <button
                   type="button"
@@ -241,7 +236,7 @@ export const MonthlyClosingPage: React.FC<MonthlyClosingPageProps> = ({ userRole
                   onClick={() => handleUnlock(selectedYear, selectedMonth)}
                   style={{
                     background: 'linear-gradient(135deg, #198754 0%, #146c43 100%)',
-                    border: 'none', color: '#fff', borderRadius: 10, padding: '8px 18px', fontSize: '0.875rem'
+                    border: 'none', color: '#fff', borderRadius: 8, padding: '7px 18px', fontSize: '0.85rem'
                   }}
                 >
                   {actionLoading

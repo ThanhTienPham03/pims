@@ -54,7 +54,7 @@ export interface UpdateUserRequest {
 }
 
 export interface JwtResponse {
-  token: string;
+  token?: string;
   type?: string;
   id: number;
   username: string;

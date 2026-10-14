@@ -6,155 +6,635 @@
 Tài liệu hướng dẫn triển khai toàn diện hệ thống PIMS bằng Docker Compose 
 trên môi trường máy tính cá nhân (Laptop) hoặc máy chủ Linux Host / VPS.
 
---------------------------------------------------------------------------------
-1. KIẾN TRÚC TRIỂN KHAI HỆ THỐNG
---------------------------------------------------------------------------------
-
-[ Người Dùng ] ──HTTP/HTTPS──> [ Nginx (Frontend Container) : Cổng 80 ]
-                                     │
-                 ┌───────────────────┴───────────────────┐
-                 │                                       │
-            [ Static Files ]               [ Reverse Proxy: /api, /ws, /camunda ]
-            (React + Vite SPA)                           │
-                                                         ▼
-                                          [ Spring Boot + Camunda 7 : Cổng 8085 ]
-                                                         │
-                                                         ▼
-                                            [ MariaDB 11.4 : Cổng 3306 ]
-                                            (Volume: pims_mariadb_data)
-
-* Chi tiết các thành phần:
-- Frontend Container: Nginx 1.27 Alpine phục vụ ứng dụng React SPA, đồng thời đảm
-  nhận vai trò Reverse Proxy điều hướng /api/, /ws/ (WebSocket audit log) và 
-  /camunda/ về Backend.
-- Backend Container: Spring Boot 3.5.3 (Java 21) tích hợp embedded Camunda 7 engine,
-  kết nối MariaDB. Hỗ trợ xác thực bảo mật HttpOnly Cookie JWT.
-- Database Container: MariaDB 11.4 LTS tự động nạp bảng dữ liệu (01_schema.sql)
-  và dữ liệu mẫu (02_data.sql) khi khởi chạy lần đầu.
-
---------------------------------------------------------------------------------
-2. YÊU CẦU TIỀN ĐỀ
---------------------------------------------------------------------------------
-
-- Đã cài đặt Docker (phiên bản 24+) và Docker Compose (v2+).
-- Bộ nhớ RAM khuyến nghị: Tối thiểu 4GB RAM trở lên.
-- Cổng mạng cần trống: 80 (Frontend Web), 8086 (Backend API), 3307 (MariaDB host).
-
---------------------------------------------------------------------------------
-3. CÁC BƯỚC KHỞI CHẠY HỆ THỐNG (QUICK START)
---------------------------------------------------------------------------------
-
-Bước 1: Chuẩn bị tệp cấu hình môi trường (.env)
-Tại thư mục gốc dự án, sao chép file .env.example thành .env:
-  - Trên Windows PowerShell:
-      Copy-Item .env.example .env
-  - Trên Linux / macOS / Terminal:
-      cp .env.example .env
-
-Bước 2: Build và khởi động các container
-Chạy lệnh duy nhất để tự động build và chạy cả 3 container:
-      docker compose up -d --build
-
-Bước 3: Kiểm tra trạng thái hệ thống
-      docker compose ps
-
-Sau khi cả 3 container (pims-database, pims-backend, pims-frontend) chuyển sang 
-trạng thái "Up" (và database đạt "healthy"), hệ thống đã sẵn sàng sử dụng.
-
---------------------------------------------------------------------------------
-4. THÔNG TIN TRUY CẬP & TÀI KHOẢN MẶC ĐỊNH
---------------------------------------------------------------------------------
-
-* Các địa chỉ truy cập:
-- Giao diện người dùng (PIMS Web qua Nginx):
-    http://localhost  (Cổng 80)
-- Camunda 7 Cockpit (Quản lý quy trình BPMN):
-    http://localhost/camunda/app/cockpit/
-- Swagger UI (REST API Documentation):
-    http://localhost:8086/swagger-ui.html
-- MariaDB Database (Kết nối DBeaver / Navicat):
-    localhost:3307  (User: root / Pass: sapassword / DB: ims)
-
-* Tài khoản đăng nhập hệ thống PIMS (Xác thực 2 bước Email + OTP):
-1. Admin (Quản trị viên toàn quyền):
-   - Email: admin@pims.local
-   - Password: Admin@123
-2. Nhân viên kho (Lập phiếu nhập/xuất, duyệt lệnh):
-   - Email: user01@pims.local
-   - Password: Admin@123
-3. Kiểm soát viên (Khóa/mở sổ tháng):
-   - Email: controller01@pims.local
-   - Password: Admin@123
-4. Camunda Cockpit:
-   - Username: admin
-   - Password: Admin@123
-
-LƯU Ý LẤY MÃ OTP NHANH KHI ĐĂNG NHẬP TRÊN LAPTOP / LOCAL:
-Khi bấm "Tiếp tục" ở màn hình đăng nhập, mở terminal gõ:
-      docker compose logs --tail=10 backend
-Mã OTP 6 số sẽ hiển thị ngay trong log để bạn nhập vào web.
-
---------------------------------------------------------------------------------
-5. CÁC LỆNH QUẢN TRỊ DOCKER THƯỜNG DÙNG
---------------------------------------------------------------------------------
-
-- Xem log toàn bộ hệ thống:
-    docker compose logs -f
-
-- Xem log riêng Backend:
-    docker compose logs -f backend
-
-- Xem log riêng Frontend Nginx:
-    docker compose logs -f frontend
-
-- Dừng toàn bộ hệ thống:
-    docker compose down
-
-- Khởi động lại khi vừa sửa code Frontend:
-    docker compose up -d --build frontend
-
-- Khởi động lại khi vừa sửa code Backend:
-    docker compose up -d --build backend
-
-- Reload Nginx không cần restart container:
-    docker exec pims-frontend nginx -s reload
-
-- Truy cập trực tiếp vào Database MariaDB bằng dòng lệnh:
-    docker exec -it pims-database mariadb -u root -psapassword ims
-
-- Sao lưu (Backup) Database ra file:
-    docker exec -i pims-database mariadb-dump -u root -psapassword ims > backup.sql
-
-- Phục hồi (Restore) Database từ file:
-    docker exec -i pims-database mariadb -u root -psapassword ims < backup.sql
-
---------------------------------------------------------------------------------
-6. HƯỚNG DẪN TRIỂN KHAI LÊN LINUX HOST (UBUNTU / DEBIAN / TIGERLAB)
---------------------------------------------------------------------------------
-
-Khi triển khai lên máy chủ Linux thật (như máy chủ Tigerlab01):
-
-Bước 1: Cài đặt Docker trên Linux
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    sudo usermod -aG docker $USER
-
-Bước 2: Clone source code về máy chủ
-    git clone https://gitlab.com/Tigerlab03/pims-managemanet.git
-    cd pims-managemanet
-    cp .env.example .env
-
-Bước 3: Cấu hình biến môi trường trên Linux
-    nano .env
-    - Thay đổi JWT_SECRET thành chuỗi bảo mật ngẫu nhiên.
-    - Cập nhật CORS_ALLOWED_ORIGINS trỏ về IP hoặc Domain của máy chủ Linux.
-
-Bước 4: Khởi chạy trên Linux
-    docker compose up -d --build
-
-Bước 5: Kiểm tra trạng thái
-    docker compose ps
+Phiên bản tài liệu: 2.0 (đồng bộ với codebase)
+Cập nhật lần cuối: 12/10/2026
 
 ================================================================================
-Tài liệu biên soạn phục vụ đồ án thực tập SAIGONBANK PIMS
+MỤC LỤC
+================================================================================
+  1. Kiến trúc triển khai hệ thống
+  2. Công nghệ sử dụng (Tech Stack)
+  3. Cấu trúc thư mục dự án
+  4. Yêu cầu tiên quyết
+  5. Các bước khởi chạy hệ thống (Quick Start)
+  6. Cấu hình biến môi trường chi tiết
+  7. Thông tin truy cập & tài khoản mặc định
+  8. Các lệnh quản trị Docker thường dùng
+  9. Hướng dẫn phát triển Local (không Docker)
+ 10. Hướng dẫn triển khai lên Linux Host
+ 11. Cơ sở dữ liệu - Schema & Bảng
+ 12. Xử lý sự cố thường gặp (Troubleshooting)
+
+================================================================================
+1. KIẾN TRÚC TRIỂN KHAI HỆ THỐNG
+================================================================================
+
+  [ Người dùng ]
+        |
+        | HTTP (Port 80)
+        v
+  +---------------------------------------------+
+  | FRONTEND CONTAINER (pims-frontend)           |
+  | Nginx 1.27 Alpine                           |
+  |  - Phục vụ React SPA (static files)         |
+  |  - Reverse Proxy: /api/  -> backend:8085    |
+  |  - Reverse Proxy: /ws/   -> backend:8085    |
+  |  - Reverse Proxy: /camunda/ -> backend:8085 |
+  +---------------------------------------------+
+        |
+        | HTTP (Port 8085 nội bộ Docker)
+        v
+  +---------------------------------------------+
+  | BACKEND CONTAINER (pims-backend)             |
+  | Eclipse Temurin JRE 21 Alpine               |
+  |  - Spring Boot 3.5.3                        |
+  |  - Camunda 7.22.0 Embedded Engine           |
+  |  - Spring Security + JWT (HttpOnly Cookie)  |
+  |  - SpringDoc OpenAPI (Swagger UI)           |
+  |  - Spring Mail (SMTP)                       |
+  |  - WebSocket (Audit Log Realtime)           |
+  +---------------------------------------------+
+        |
+        | JDBC MariaDB (Port 3306 nội bộ Docker)
+        v
+  +---------------------------------------------+
+  | DATABASE CONTAINER (pims-database)           |
+  | MariaDB 11.4 LTS                            |
+  |  - Charset: utf8mb4_unicode_ci              |
+  |  - Timezone: Asia/Ho_Chi_Minh (+07:00)      |
+  |  - Volume: pims_mariadb_data                |
+  |  - Auto init: 01_schema.sql + 02_data.sql   |
+  +---------------------------------------------+
+
+* Chi tiết các thành phần:
+
+- Frontend Container (pims-frontend):
+  Nginx Alpine phục vụ ứng dụng React 19 SPA (build bằng Vite 8 + TypeScript 6),
+  đồng thời đảm nhận vai trò Reverse Proxy điều hướng các đường dẫn:
+    /api/*     -> Spring Boot REST API
+    /ws/*      -> WebSocket endpoint (audit log realtime)
+    /camunda/* -> Camunda 7 Cockpit/Admin Webapp
+  Nginx được cấu hình sẵn Gzip compression, Security Headers (X-Frame-Options,
+  X-XSS-Protection, X-Content-Type-Options, Referrer-Policy), và static asset
+  caching 1 năm cho CSS/JS/fonts/images.
+
+- Backend Container (pims-backend):
+  Spring Boot 3.5.3 chạy trên Java 21 (Eclipse Temurin JRE Alpine), tích hợp
+  embedded Camunda 7.22.0 engine (Webapp Cockpit + REST API). Kết nối MariaDB
+  qua HikariCP connection pool (max 10 connections). Hỗ trợ xác thực bảo mật
+  HttpOnly Cookie JWT (JJWT 0.12.6) với xác thực 2 bước Email + OTP.
+  Dockerfile sử dụng multi-stage build: Stage 1 (Maven 3.9.9 + JDK 21) build
+  fat JAR, Stage 2 (JRE 21 Alpine) chạy với non-root user "pims".
+  JVM options: G1GC, MaxRAMPercentage=75%.
+
+- Database Container (pims-database):
+  MariaDB 11.4 LTS tự động nạp schema (01_schema.sql) và dữ liệu mẫu 
+  (02_data.sql) khi khởi chạy lần đầu. Có healthcheck tự động (ping mỗi 10s,
+  timeout 5s, tối đa 10 lần retry, start period 30s). Dữ liệu được persist
+  qua Docker named volume "pims_mariadb_data".
+
+* Mạng Docker:
+  Tất cả 3 container cùng chung Docker bridge network "pims-network", giao tiếp
+  nội bộ qua hostname: database, backend, frontend.
+
+================================================================================
+2. CÔNG NGHỆ SỬ DỤNG (TECH STACK)
+================================================================================
+
+  Thành phần       | Công nghệ                        | Phiên bản
+  -----------------+-----------------------------------+-----------
+  Backend Runtime  | Java (Eclipse Temurin)            | 21
+  Backend Build    | Apache Maven                      | 3.9.9
+  Backend Framework| Spring Boot                       | 3.5.3
+  Security         | Spring Security + JJWT            | 0.12.6
+  BPM Engine       | Camunda 7 (Embedded)              | 7.22.0
+  API Docs         | SpringDoc OpenAPI (Swagger UI)    | 2.8.5
+  ORM              | Spring Data JPA / Hibernate       | (managed)
+  Database         | MariaDB                           | 11.4 LTS
+  Frontend Runtime | Node.js (build only)              | 22
+  Frontend UI      | React + TypeScript                | 19.x + 6.x
+  Frontend Build   | Vite                              | 8.x
+  CSS Framework    | Bootstrap + Bootstrap Icons       | 5.3.8
+  PDF Export       | jsPDF + html2canvas               | 4.2.1
+  Web Server       | Nginx                             | Alpine
+  Containerization | Docker + Docker Compose           | 24+ / v2+
+  Code Generation  | Lombok                            | (managed)
+  Monitoring       | Spring Boot Actuator              | (managed)
+
+================================================================================
+3. CẤU TRÚC THƯ MỤC DỰ ÁN
+================================================================================
+
+  TTDN-QuanLyTaiSan/
+  ├── docker-compose.yml          # Orchestration 3 services
+  ├── DEPLOY.txt                  # Tài liệu này
+  ├── .gitignore
+  │
+  ├── database/
+  │   ├── .env                    # Biến môi trường MariaDB
+  │   ├── .env.example            # Template biến môi trường
+  │   ├── schema.sql              # DDL: 13 bảng (v2.0)
+  │   └── data.sql                # DML: Dữ liệu mẫu (roles, users, product_groups, units, products)
+  │
+  ├── backend/ims/
+  │   ├── .env                    # Biến môi trường Backend
+  │   ├── .env.example            # Template biến môi trường
+  │   ├── Dockerfile              # Multi-stage: Maven build → JRE runtime
+  │   ├── pom.xml                 # Maven dependencies
+  │   ├── mvnw / mvnw.cmd         # Maven Wrapper (cross-platform)
+  │   └── src/
+  │       ├── main/
+  │       │   ├── java/saigonbank/fit/   # Java source code
+  │       │   └── resources/
+  │       │       ├── application.yml     # Spring Boot config
+  │       │       ├── bpmn/              # BPMN process definitions
+  │       │       │   ├── process_nhap_an_pham.bpmn
+  │       │       │   ├── process_xuat_an_pham.bpmn
+  │       │       │   ├── process_chot_so.bpmn
+  │       │       │   └── process_quan_ly_danh_muc_an_pham.bpmn
+  │       │       ├── dmn/               # DMN decision tables
+  │       │       │   └── decision_phe_duyet_xuat.dmn
+  │       │       ├── static/            # Static resources
+  │       │       └── templates/         # Email templates
+  │       └── test/                      # Unit tests (H2 in-memory)
+  │
+  ├── frontend/ims-fe/
+  │   ├── .env.development        # Vite env (dev mode: localhost:8085)
+  │   ├── Dockerfile              # Multi-stage: Node build → Nginx serve
+  │   ├── nginx.conf              # Nginx config (reverse proxy + SPA)
+  │   ├── package.json            # NPM dependencies
+  │   ├── vite.config.ts          # Vite build config
+  │   ├── tsconfig.json           # TypeScript config
+  │   ├── index.html              # SPA entry point
+  │   └── src/
+  │       ├── main.tsx            # React entry
+  │       ├── App.tsx             # Root component
+  │       ├── pages/              # Route pages (13 pages)
+  │       │   ├── LoginPage.tsx
+  │       │   ├── DashboardPage.tsx
+  │       │   ├── ProductsPage.tsx
+  │       │   ├── InventoryPage.tsx
+  │       │   ├── ImportsPage.tsx
+  │       │   ├── CreateImportPage.tsx
+  │       │   ├── ExportsPage.tsx
+  │       │   ├── CreateExportPage.tsx
+  │       │   ├── MonthlyClosingPage.tsx
+  │       │   ├── KktsPage.tsx
+  │       │   ├── UsersPage.tsx
+  │       │   └── ActivityPage.tsx
+  │       ├── components/         # Reusable components
+  │       ├── layouts/            # MainLayout.tsx
+  │       ├── services/           # API client + WebSocket
+  │       ├── hooks/              # Custom React hooks
+  │       ├── types/              # TypeScript type definitions
+  │       ├── utils/              # Helpers (PDF export, số → chữ VN)
+  │       └── assets/             # Images (logo, hero)
+  │
+  └── BPMN-IMS/                   # BPMN diagram files (tài liệu tham khảo)
+      ├── BPMN-TongQuanQuyTrinh.bpmn
+      ├── process_chot_so.bpmn
+      ├── process_nhap_an_pham.bpmn
+      ├── process_quan_ly_danh_muc_an_pham.bpmn
+      └── process_xuat_an_pham.bpmn
+
+================================================================================
+4. YÊU CẦU TIÊN QUYẾT
+================================================================================
+
++-------------------+------------------------------------------------------+
+| Yêu cầu          | Chi tiết                                             |
++-------------------+------------------------------------------------------+
+| Docker            | Phiên bản 24+ (bao gồm Docker Compose v2 plugin)    |
+| RAM               | Tối thiểu 4GB (khuyến nghị 8GB)                     |
+| Disk              | Tối thiểu 5GB trống (Docker images + MariaDB data)   |
+| Cổng mạng trống   | 80 (Frontend), 8086 (Backend), 3307 (Database)       |
++-------------------+------------------------------------------------------+
+
+Kiểm tra Docker đã cài đặt:
+    docker --version
+    docker compose version
+
+================================================================================
+5. CÁC BƯỚC KHỞI CHẠY HỆ THỐNG (QUICK START)
+================================================================================
+
+Bước 1: Chuẩn bị tệp cấu hình môi trường (.env)
+
+  Cấu hình file .env trong folder database và folder backend/ims.
+  
+  Theo cấu trúc .env.example có sẵn trong thư mục backend và database
+
+  QUAN TRỌNG: Sau khi sao chép, cần chỉnh sửa các giá trị trong file .env 
+  cho phù hợp môi trường triển khai. Xem mục 6 để biết chi tiết từng biến.
+
+  Lưu ý: Password trong database/.env phải KHỚP với backend/ims/.env:
+    - database/.env:     MYSQL_ROOT_PASSWORD phải = backend/ims/.env: DB_PASSWORD
+    - database/.env:     MYSQL_USER phải = backend/ims/.env: DB_USER  
+    - database/.env:     MYSQL_PASSWORD phải = backend/ims/.env: DB_USER_PASSWORD
+
+Bước 2: Build và khởi động các container
+
+  Chạy lệnh duy nhất để tự động build và chạy cả 3 container:
+      docker compose up -d --build
+
+  Quá trình build lần đầu mất khoảng 5-10 phút (tải Docker images, Maven 
+  dependencies, NPM packages). Các lần sau nhanh hơn nhờ Docker layer cache.
+
+  Thứ tự khởi động tự động:
+    1. pims-database  (khởi động trước, chờ healthcheck)
+    2. pims-backend   (chỉ start khi database HEALTHY)
+    3. pims-frontend  (start sau backend)
+
+Bước 3: Kiểm tra trạng thái hệ thống
+
+      docker compose ps
+
+  Kết quả mong đợi (cả 3 container trạng thái "Up"):
+  NAME             IMAGE              STATUS                  PORTS
+  pims-database    mariadb:11.4       Up (healthy)            0.0.0.0:3307->3306/tcp
+  pims-backend     pims-backend       Up                      0.0.0.0:8086->8085/tcp
+  pims-frontend    pims-frontend      Up                      0.0.0.0:80->80/tcp
+
+Bước 4: Truy cập hệ thống
+
+  Mở trình duyệt: http://localhost
+  Đăng nhập bằng tài khoản mặc định (xem mục 7).
+
+================================================================================
+6. CẤU HÌNH BIẾN MÔI TRƯỜNG CHI TIẾT
+================================================================================
+
+--- FILE: database/.env ---
+
+  Biến                  | Mô tả                        | Giá trị mặc định
+  ----------------------+-------------------------------+-------------------
+  MYSQL_ROOT_PASSWORD   | Mật khẩu root MariaDB         | (bắt buộc đặt)
+  MYSQL_DATABASE        | Tên database                  | ims
+  MYSQL_USER            | User ứng dụng                 | ims_user
+  MYSQL_PASSWORD        | Mật khẩu user ứng dụng        | (bắt buộc đặt)
+  TZ                    | Timezone container            | Asia/Ho_Chi_Minh
+
+--- FILE: backend/ims/.env ---
+
+  Biến                  | Mô tả                              | Giá trị mặc định
+  ----------------------+-------------------------------------+-----------------------
+  DB_NAME               | Tên database (phải khớp MYSQL_DB)   | ims
+  DB_PORT               | Port MariaDB trên host              | 3307
+  DB_PASSWORD           | Password root MariaDB               | (khớp database/.env)
+  DB_USER               | User ứng dụng MariaDB               | ims_user
+  DB_USER_PASSWORD      | Password user ứng dụng              | (khớp database/.env)
+  BACKEND_PORT          | Port backend trên host               | 8086
+  SERVER_PORT           | Port Spring Boot nội bộ container   | 8085
+  JPA_DDL_AUTO          | Hibernate DDL strategy              | update
+  JWT_SECRET            | Secret key JWT (>= 64 ký tự)       | (BẮT BUỘC thay đổi!)
+  JWT_EXPIRATION_MS     | Thời gian hết hạn JWT (ms)          | 10800000 (3 giờ)
+  CORS_ALLOWED_ORIGINS  | Danh sách origin được phép           | http://localhost,...
+  CAMUNDA_ADMIN_PASSWORD| Mật khẩu admin Camunda Cockpit      | Admin@123
+  MAIL_HOST             | SMTP server                         | smtp.gmail.com
+  MAIL_PORT             | SMTP port                           | 587
+  MAIL_USERNAME         | Email gửi OTP                       | (bắt buộc cấu hình)
+  MAIL_PASSWORD         | App Password SMTP                   | (bắt buộc cấu hình)
+  MAIL_FROM             | Địa chỉ email hiển thị              | (bắt buộc cấu hình)
+
+  LƯU Ý VỀ MAIL_PASSWORD:
+  Nếu dùng Gmail, cần tạo "App Password" (không dùng mật khẩu Gmail thông thường):
+    1. Bật xác thực 2 bước tại: https://myaccount.google.com/security
+    2. Tạo App Password tại: https://myaccount.google.com/apppasswords
+    3. Dùng mã 16 ký tự được tạo làm giá trị MAIL_PASSWORD
+
+  LƯU Ý VỀ JWT_SECRET:
+  Tạo secret key ngẫu nhiên an toàn:
+    Linux/macOS:  openssl rand -base64 64
+    PowerShell:   [Convert]::ToBase64String((1..64 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
+
+--- FILE: frontend/ims-fe/.env.development (chỉ dùng khi dev local không Docker) ---
+
+  Biến           | Mô tả                          | Giá trị mặc định
+  ---------------+--------------------------------+----------------------------
+  VITE_API_URL   | URL API cho Vite dev server    | http://localhost:8085/api
+
+  Khi chạy bằng Docker, VITE_API_URL được set thành "/api" (qua Nginx proxy)
+  trong docker-compose.yml build args, KHÔNG cần chỉnh file này.
+
+================================================================================
+7. THÔNG TIN TRUY CẬP & TÀI KHOẢN MẶC ĐỊNH
+================================================================================
+
+* Các địa chỉ truy cập:
+
+  +-------------------------------------+--------------------------------------+
+  | Mục đích                            | URL                                  |
+  +-------------------------------------+--------------------------------------+
+  | Giao diện PIMS Web (qua Nginx)      | http://localhost                     |
+  | Camunda 7 Cockpit (quản lý BPMN)    | http://localhost/camunda/            | 
+  | MariaDB (DBeaver/Navicat)           | localhost:3307                       |
+  +-------------------------------------+--------------------------------------+
+
+* Tài khoản đăng nhập hệ thống PIMS (Xác thực 2 bước Email + OTP):
+
+  +----+-------------------------------+----------------------------+-------------+
+  | #  | Vai trò                       | Email                      | Mật khẩu    |
+  +----+-------------------------------+----------------------------+-------------+
+  | 1  | Admin (Toàn quyền hệ thống)  | admin@pims.local           | Admin@123   |
+  | 2  | Nhân viên kho (Lập phiếu NX) | user01@pims.local          | Admin@123   |
+  | 3  | Kiểm soát viên (Khóa/mở sổ)  | controller@pims.local      | Admin@123   |
+  +----+-------------------------------+----------------------------+-------------+
+
+  Mô tả quyền hạn từng vai trò:
+  - ADMIN:      Toàn quyền hệ thống, quản lý người dùng, danh mục, phiếu NX
+  - USER:       Tạo phiếu nhập/xuất, xem phiếu, xem tồn kho, xem báo cáo
+  - CONTROLLER: Khóa/mở khóa sổ kế toán tháng, kiểm soát dữ liệu
+
+* Tài khoản Camunda 7 Cockpit:
+
+  +------------+-------------+
+  | Username   | Password    |
+  +------------+-------------+
+  | admin      | Admin@123   |
+  +------------+-------------+
+  (Có thể thay đổi qua biến CAMUNDA_ADMIN_PASSWORD trong backend/ims/.env)
+
+* Kết nối Database bằng công cụ (DBeaver / Navicat / DataGrip):
+
+  +----------+------------------+
+  | Thuộc tính| Giá trị          |
+  +----------+------------------+
+  | Host     | localhost        |
+  | Port     | 3307             |
+  | Database | ims              |
+  | Username | root             |
+  | Password | (MYSQL_ROOT_PASSWORD trong database/.env) |
+  +----------+------------------+
+
+* LẤY MÃ OTP NHANH KHI ĐĂNG NHẬP TRÊN LOCAL:
+
+  Khi bấm "Tiếp tục" ở màn hình đăng nhập, nếu SMTP chưa cấu hình hoặc
+  muốn xem nhanh OTP, mở terminal gõ:
+
+      docker compose logs --tail=10 backend
+
+  Mã OTP 6 số sẽ hiện thị ngay trong log để bạn nhập vào web.
+
+================================================================================
+8. CÁC LỆNH QUẢN TRỊ DOCKER THƯỜNG DÙNG
+================================================================================
+
+--- Xem log ---
+
+  Xem log toàn bộ hệ thống (realtime):
+      docker compose logs -f
+
+  Xem log riêng Backend:
+      docker compose logs -f backend
+
+  Xem log riêng Frontend Nginx:
+      docker compose logs -f frontend
+
+  Xem log riêng Database:
+      docker compose logs -f database
+
+  Xem 50 dòng log gần nhất của Backend:
+      docker compose logs --tail=50 backend
+
+--- Quản lý container ---
+
+  Dừng toàn bộ hệ thống (giữ dữ liệu):
+      docker compose down
+
+  Dừng và XÓA dữ liệu database (reset hoàn toàn):
+      docker compose down -v
+
+  Khởi động lại khi vừa sửa code Frontend:
+      docker compose up -d --build frontend
+
+  Khởi động lại khi vừa sửa code Backend:
+      docker compose up -d --build backend
+
+  Khởi động lại toàn bộ (không build lại):
+      docker compose restart
+
+  Reload Nginx không cần restart container:
+      docker exec pims-frontend nginx -s reload
+
+--- Thao tác Database ---
+
+  Truy cập MariaDB bằng dòng lệnh:
+      docker exec -it pims-database mariadb -u root -p ims
+      (Nhập password khi được hỏi)
+
+  Sao lưu (Backup) Database ra file:
+      docker exec pims-database mariadb-dump -u root -p"YOUR_PASSWORD" ims > backup_$(date +%Y%m%d).sql
+
+  Phục hồi (Restore) Database từ file:
+      docker exec -i pims-database mariadb -u root -p"YOUR_PASSWORD" ims < backup.sql
+
+  Trên Windows PowerShell (backup):
+      docker exec pims-database mariadb-dump -u root -p"YOUR_PASSWORD" ims > "backup_$(Get-Date -Format 'yyyyMMdd').sql"
+
+--- Dọn dẹp Docker ---
+
+  Xóa Docker images không dùng:
+      docker image prune -f
+
+  Xóa toàn bộ cache build:
+      docker builder prune -f
+
+================================================================================
+9. HƯỚNG DẪN PHÁT TRIỂN LOCAL (KHÔNG DOCKER)
+================================================================================
+
+Khi phát triển và debug trực tiếp trên máy (không qua Docker):
+
+Yêu cầu cài đặt trước:
+  - Java JDK 21 (Eclipse Temurin hoặc Oracle)
+  - Node.js 22+ (kèm npm)
+  - MariaDB 11.4 (hoặc MySQL 8+) đang chạy trên port 3306/3307
+
+Bước 1: Khởi động Database (chỉ chạy MariaDB container nếu chưa có)
+      docker compose up -d database
+
+Bước 2: Chạy Backend (Spring Boot)
+      cd backend\ims
+      .\mvnw.cmd spring-boot:run
+  (Linux: ./mvnw spring-boot:run)
+
+  Backend sẽ chạy tại: http://localhost:8085
+  Swagger UI: http://localhost:8085/swagger-ui.html
+  Camunda Cockpit: http://localhost:8085/camunda/
+
+Bước 3: Chạy Frontend (Vite Dev Server)
+      cd frontend\ims-fe
+      npm install
+      npm run dev
+
+  Frontend dev server sẽ chạy tại: http://localhost:5173
+  File .env.development đã cấu hình VITE_API_URL=http://localhost:8085/api
+  để gọi trực tiếp Backend mà không cần Nginx proxy.
+
+================================================================================
+10. HƯỚNG DẪN TRIỂN KHAI LÊN LINUX HOST (UBUNTU / DEBIAN)
+================================================================================
+
+Bước 1: Cài đặt Docker trên Linux
+
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sudo sh get-docker.sh
+      sudo usermod -aG docker $USER
+      # Logout và login lại để áp dụng group docker
+
+  Xác minh:
+      docker --version
+      docker compose version
+
+Bước 2: Clone source code về máy chủ
+
+      git clone <URL_REPOSITORY>
+      cd TTDN-QuanLyTaiSan
+
+Bước 3: Chuẩn bị file cấu hình
+
+      cp database/.env.example database/.env
+      cp backend/ims/.env.example backend/ims/.env
+
+Bước 4: Cấu hình biến môi trường trên Linux
+
+      nano backend/ims/.env
+
+  Các thay đổi BẮT BUỘC cho production:
+  - JWT_SECRET: Đổi thành chuỗi bảo mật ngẫu nhiên (>= 64 ký tự)
+        openssl rand -base64 64
+  - CORS_ALLOWED_ORIGINS: Thay bằng IP/Domain thực của máy chủ
+        VD: http://192.168.1.100,http://pims.saigonbank.vn
+  - MAIL_*: Cấu hình SMTP server thực tế
+  - CAMUNDA_ADMIN_PASSWORD: Đổi mật khẩu admin Camunda
+
+      nano database/.env
+  - MYSQL_ROOT_PASSWORD: Đổi mật khẩu root mạnh
+  - MYSQL_PASSWORD: Đổi mật khẩu user ứng dụng
+  - Đảm bảo password KHỚP giữa 2 file .env
+
+Bước 5: Khởi chạy trên Linux
+
+      docker compose up -d --build
+
+Bước 6: Kiểm tra trạng thái
+
+      docker compose ps
+      docker compose logs -f
+
+Bước 7 (Tùy chọn): Cấu hình tự động khởi động khi reboot
+
+  Docker containers đã được cấu hình "restart: unless-stopped" trong
+  docker-compose.yml, nên chúng sẽ tự khởi động lại khi máy chủ reboot
+  (miễn là Docker daemon đang chạy).
+
+  Đảm bảo Docker daemon tự khởi động:
+      sudo systemctl enable docker
+
+================================================================================
+11. CƠ SỞ DỮ LIỆU - SCHEMA & BẢNG
+================================================================================
+
+Database "ims" gồm 13 bảng chính (Schema v2.0):
+
+  +----+------------------------------+------------------------------------------+
+  | #  | Tên bảng                     | Mô tả                                    |
+  +----+------------------------------+------------------------------------------+
+  | 1  | roles                        | Vai trò hệ thống (ADMIN, USER, CONTROLLER)|
+  | 2  | users                        | Tài khoản người dùng                     |
+  | 3  | user_roles                   | Quan hệ N-N giữa users và roles          |
+  | 4  | product_groups               | Nhóm hàng (VPP, ACTT, ACQT, VLK)         |
+  | 5  | units                        | Đơn vị tính (Cái, Hộp, Quyển, Ream, ...) |
+  | 6  | products                     | Danh mục ấn phẩm / văn phòng phẩm        |
+  | 7  | inventory                    | Tồn kho realtime (1:1 với product)        |
+  | 8  | inventory_transactions       | Phiếu giao dịch (IMPORT/EXPORT/...)       |
+  | 9  | inventory_transaction_details| Chi tiết phiếu giao dịch                 |
+  | 10 | document_sequences           | Cấp số phiếu tự động (STT/GROUP-YYYY)    |
+  | 11 | monthly_closings             | Khóa sổ kế toán theo tháng                |
+  | 12 | kkts                         | Kiểm Kê Tài Sản (bảng kê tồn kho kỳ)    |
+  | 13 | audit_logs                   | Nhật ký thao tác (audit trail)            |
+  +----+------------------------------+------------------------------------------+
+
+  Ngoài ra, Camunda 7 tự tạo thêm ~50 bảng hệ thống (ACT_*) cho workflow engine.
+
+  Thay đổi so với Schema 1.0:
+  - Bảng danh mục chuẩn hóa riêng biệt: product_groups (nhóm hàng) và units (đơn vị tính)
+  - imports + exports → inventory_transactions (thống nhất, dùng ENUM type)
+  - import_details + export_details → inventory_transaction_details
+  - Xóa bảng stock_card_entries (tính toán on-the-fly từ transaction details)
+  - Xóa bảng account_codes (chưa dùng trong business logic)
+  - Tối ưu còn 13 bảng đồng bộ 100% với Spring Boot Entities
+
+================================================================================
+12. XỬ LÝ SỰ CỐ THƯỜNG GẶP (TROUBLESHOOTING)
+================================================================================
+
+--- Lỗi: Backend không kết nối được Database ---
+
+  Triệu chứng: Log backend hiện "Connection refused" hoặc "Access denied"
+  Giải pháp:
+    1. Kiểm tra database container đã healthy chưa:
+        docker compose ps database
+    2. Kiểm tra password khớp giữa database/.env và backend/ims/.env
+    3. Chờ database healthcheck pass (có thể mất 30-60s lần đầu):
+        docker compose logs -f database
+
+--- Lỗi: Port đã bị chiếm ---
+
+  Triệu chứng: "bind: address already in use"
+  Giải pháp:
+    Đổi port trong backend/ims/.env:
+      DB_PORT=3308        (thay vì 3307)
+      BACKEND_PORT=8087   (thay vì 8086)
+    Hoặc tắt service đang chiếm port.
+
+    Kiểm tra port trên Windows:
+      netstat -aon | findstr :3307
+    Kiểm tra port trên Linux:
+      ss -tlnp | grep 3307
+
+--- Lỗi: Frontend trắng trang / không tải được ---
+
+  Triệu chứng: Trang trắng, Console browser báo lỗi CORS hoặc 502
+  Giải pháp:
+    1. Kiểm tra Backend đã chạy chưa:
+        docker compose ps backend
+    2. Kiểm tra Nginx proxy config:
+        docker exec pims-frontend cat /etc/nginx/conf.d/default.conf
+    3. Thử truy cập Backend trực tiếp:
+        curl http://localhost:8086/api/health
+
+--- Lỗi: OTP email không gửi được ---
+
+  Triệu chứng: Đăng nhập xong không nhận được email OTP
+  Giải pháp:
+    1. Kiểm tra cấu hình MAIL_* trong backend/ims/.env
+    2. Nếu dùng Gmail: đảm bảo đã tạo App Password (không dùng pass Gmail)
+    3. Xem OTP trong log Backend:
+        docker compose logs --tail=20 backend
+
+--- Lỗi: Build Docker quá chậm / hết bộ nhớ ---
+
+  Giải pháp:
+    1. Tăng RAM cho Docker Desktop (Settings > Resources > Memory > 4GB+)
+    2. Xóa cache cũ: docker builder prune -f
+    3. Build từng service riêng:
+        docker compose build database
+        docker compose build backend
+        docker compose build frontend
+
+--- Lỗi: Database không tự tạo schema ---
+
+  Triệu chứng: Bảng không tồn tại sau khi khởi chạy
+  Giải pháp:
+    File SQL chỉ chạy khi LẦN ĐẦU khởi tạo volume (database trống).
+    Nếu cần reset:
+      docker compose down -v
+      docker compose up -d --build
+
+    CẢNH BÁO: "docker compose down -v" sẽ XÓA TOÀN BỘ dữ liệu database!
+
+================================================================================
+  Tài liệu biên soạn phục vụ đồ án thực tập SAIGONBANK PIMS
+  Hệ thống Quản lý Nhập Xuất Ấn phẩm Văn phòng phẩm
 ================================================================================

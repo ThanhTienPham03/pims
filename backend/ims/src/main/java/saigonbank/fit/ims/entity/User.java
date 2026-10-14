@@ -45,7 +45,7 @@ public class User {
             insertable = false, columnDefinition = "DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6)")
     private java.time.LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false,
+    @Column(name = "updated_at", nullable = false, updatable = false,
             insertable = false, columnDefinition = "DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)")
     private java.time.LocalDateTime updatedAt;
 

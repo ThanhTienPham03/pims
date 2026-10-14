@@ -127,6 +127,18 @@ public class InventoryService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> getInventorySummary() {
+        long totalProducts = productRepository.countActive();
+        long withStock = inventoryRepository.countProductsWithStock();
+        BigDecimal totalAmount = inventoryRepository.sumTotalAmount();
+        return java.util.Map.of(
+                "totalProducts", totalProducts,
+                "productsWithStock", withStock,
+                "totalInventoryAmount", totalAmount != null ? totalAmount : BigDecimal.ZERO
+        );
+    }
+
     private InventoryResponse mapToResponse(Inventory i) {
         Product p = i.getProduct();
         return InventoryResponse.builder()

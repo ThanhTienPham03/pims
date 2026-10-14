@@ -62,8 +62,22 @@ public class AuthService {
                     "Tài khoản chưa có email. Vui lòng liên hệ quản trị viên để cập nhật.");
         }
 
+        String normalizedEmail = userEmail.trim().toLowerCase();
+
+        // Nếu không yêu cầu gửi lại (forceResend) và đã có mã OTP còn hiệu lực: tái sử dụng mã cũ, không gửi đè email mới
+        if (!request.isForceResend() && otpStore.hasPending(normalizedEmail)) {
+            long remainingSeconds = otpStore.getRemainingSeconds(normalizedEmail);
+            log.info("Pending OTP reused for email '{}' (username: {}), {}s remaining", normalizedEmail, user.getUsername(), remainingSeconds);
+            return InitiateLoginResponse.builder()
+                    .maskedEmail(maskEmail(userEmail))
+                    .message("Mã OTP đã được gửi trước đó và vẫn còn hiệu lực. Vui lòng kiểm tra hộp thư của bạn.")
+                    .isNewOtp(false)
+                    .expiresInSeconds(remainingSeconds)
+                    .build();
+        }
+
         String otpCode = generateOtp();
-        otpStore.save(userEmail.toLowerCase(), otpCode);
+        otpStore.save(normalizedEmail, otpCode);
         log.info("OTP generated for email '{}' (username: {}): {} (email: {})", userEmail, user.getUsername(), otpCode, maskEmail(userEmail));
 
         String recipientName = user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getUsername();
@@ -72,6 +86,8 @@ public class AuthService {
         return InitiateLoginResponse.builder()
                 .maskedEmail(maskEmail(userEmail))
                 .message("Mã OTP 6 số đã được gửi đến email của bạn. Mã có hiệu lực trong 5 phút.")
+                .isNewOtp(true)
+                .expiresInSeconds(OtpStore.OTP_TTL_MINUTES * 60L)
                 .build();
     }
 

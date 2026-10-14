@@ -12,25 +12,25 @@ services:
     image: mariadb:11.4
     container_name: pims-database
     restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: sapassword
+      MYSQL_DATABASE: ims
+      MYSQL_USER: ims_user
+      MYSQL_PASSWORD: ims_password
+      TZ: Asia/Ho_Chi_Minh
     command: [
       "--character-set-server=utf8mb4",
       "--collation-server=utf8mb4_unicode_ci",
       "--default-time-zone=+07:00"
     ]
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-sapassword}
-      MYSQL_DATABASE: ${DB_NAME:-ims}
-      MYSQL_USER: ${DB_USER:-ims_user}
-      MYSQL_PASSWORD: ${DB_USER_PASSWORD:-ims_password}
-      TZ: Asia/Ho_Chi_Minh
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "3307:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./database/data.sql:/docker-entrypoint-initdb.d/02_data.sql:ro
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-sapassword}"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -51,24 +51,12 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    env_file:
+      - ./backend/ims/.env
     environment:
-      DB_URL: jdbc:mariadb://database:3306/${DB_NAME:-ims}?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-      DB_USERNAME: root
-      DB_PASSWORD: ${DB_PASSWORD:-sapassword}
-      JWT_SECRET: ${JWT_SECRET:-pims-saigonbank-secret-key-2026-very-long-and-secure-string-for-hmac-sha256}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-10800000}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173,http://localhost:3000}
-      SERVER_PORT: 8085
-      JPA_DDL_AUTO: update
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:-thanhtien17323@gmail.com}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-ldyiyrcljtxhdhfx}
-      MAIL_FROM: ${MAIL_FROM:-thanhtien17323@gmail.com}
-      CAMUNDA_ADMIN_PASSWORD: ${CAMUNDA_ADMIN_PASSWORD:-Admin@123}
-      TZ: Asia/Ho_Chi_Minh
+      DB_URL: jdbc:mariadb://database:3306/ims?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
     ports:
-      - "${BACKEND_PORT:-8085}:8085"
+      - "${BACKEND_PORT:-8086}:8085"
     networks:
       - pims-network
 

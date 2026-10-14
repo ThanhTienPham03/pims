@@ -43,7 +43,27 @@ public class OtpStore {
 
     public boolean hasPending(String username) {
         OtpEntry entry = store.get(username);
-        return entry != null && LocalDateTime.now().isBefore(entry.expiredAt());
+        if (entry == null) {
+            return false;
+        }
+        if (LocalDateTime.now().isAfter(entry.expiredAt())) {
+            store.remove(username);
+            return false;
+        }
+        return true;
+    }
+
+    public long getRemainingSeconds(String username) {
+        OtpEntry entry = store.get(username);
+        if (entry == null) {
+            return 0;
+        }
+        if (LocalDateTime.now().isAfter(entry.expiredAt())) {
+            store.remove(username);
+            return 0;
+        }
+        long diff = java.time.Duration.between(LocalDateTime.now(), entry.expiredAt()).getSeconds();
+        return Math.max(0, diff);
     }
 
     public void remove(String username) {

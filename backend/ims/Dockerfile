@@ -1,8 +1,3 @@
-# ==============================================================================
-# PIMS Backend - Multi-stage Dockerfile (Spring Boot 3.5 + Java 21)
-# ==============================================================================
-
-# ----------------- STAGE 1: Build Application -----------------
 FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 

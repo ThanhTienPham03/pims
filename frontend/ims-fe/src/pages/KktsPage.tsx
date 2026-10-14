@@ -51,10 +51,6 @@ export const KktsPage: React.FC<KktsPageProps> = ({ showToast }) => {
 
   const totals = calculateTotals();
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleExportPdf = async () => {
     if (!reportRef.current) return;
     setExporting(true);
@@ -124,26 +120,6 @@ export const KktsPage: React.FC<KktsPageProps> = ({ showToast }) => {
                   ))}
                 </select>
               </div>
-              <button
-                type="button"
-                className="btn btn-primary fw-medium d-flex align-items-center gap-2"
-                onClick={loadKkts}
-                disabled={loading}
-              >
-                <i className={`bi bi-arrow-clockwise ${loading ? 'spin' : ''}`} aria-hidden="true" /> Xem báo cáo
-              </button>
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm rounded-pill fw-medium px-3 d-flex align-items-center gap-2"
-                onClick={handlePrint}
-                disabled={loading || kktsList.length === 0}
-                title="In trực tiếp bằng lệnh in của trình duyệt"
-              >
-                <i className="bi bi-printer" aria-hidden="true" /> In trang
-              </button>
             </div>
           </div>
         </div>
