@@ -123,6 +123,8 @@ camunda:
 
 # Logging Configuration
 logging:
+  file:
+    name: ${LOG_FILE:logs/log.txt}
   level:
     root: INFO
     saigonbank.fit.ims: INFO
@@ -131,6 +133,12 @@ logging:
     org.mariadb.jdbc: WARN    # Đã sửa từ TRACE → WARN (TRACE có thể leak sensitive data)
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+
 
 # SpringDoc OpenAPI (Swagger UI) Configuration
 springdoc:

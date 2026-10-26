@@ -14,15 +14,21 @@ import saigonbank.fit.ims.service.ProductService;
 import java.math.BigDecimal;
 
 /**
- * CatalogProcessDelegate — Delegate tự động cho Quy trình Quản lý Danh mục Ấn phẩm.
+ * CatalogProcessDelegate — Delegate tự động cho Quy trình Quản lý Danh mục Ấn
+ * phẩm.
  *
- * <p>Được ánh xạ vào bean {@code initStockCardDelegate} sử dụng trong BPMN:
+ * <p>
+ * Được ánh xạ vào bean {@code initStockCardDelegate} sử dụng trong BPMN:
  * <ul>
- *   <li>{@code Task_KhoiTaoTheKho}  — Tự động khởi tạo thẻ kho cho mã hàng mới</li>
- *   <li>{@code Task_KhoiTaoDongKKTS} — Tự động khởi tạo dòng KKTS với tồn ban đầu = 0</li>
+ * <li>{@code Task_KhoiTaoTheKho} — Tự động khởi tạo thẻ kho cho mã hàng
+ * mới</li>
+ * <li>{@code Task_KhoiTaoDongKKTS} — Tự động khởi tạo dòng KKTS với tồn ban đầu
+ * = 0</li>
  * </ul>
  *
- * <p>Các bước còn lại trong quy trình dùng {@code genericTaskDelegate} (chỉ ghi log).
+ * <p>
+ * Các bước còn lại trong quy trình dùng {@code genericTaskDelegate} (chỉ ghi
+ * log).
  */
 @Slf4j
 @Component("catalogProcessDelegate")
@@ -33,20 +39,24 @@ public class CatalogProcessDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) throws Exception {
-        String activityId   = execution.getCurrentActivityId();
+        String activityId = execution.getCurrentActivityId();
         String activityName = execution.getCurrentActivityName();
         String processInstanceId = execution.getProcessInstanceId();
-        String loaiThaoTac  = (String) execution.getVariable("loaiThaoTac");
-        String username     = (String) execution.getVariable("username");
-        if (username == null) username = "camunda_system";
+        String loaiThaoTac = (String) execution.getVariable("loaiThaoTac");
+        String username = (String) execution.getVariable("username");
+        if (username == null)
+            username = "camunda_system";
 
         log.info("[CatalogDelegate] Bước: '{}' ({}) | Process: {} | loaiThaoTac: {}",
                 activityName, activityId, processInstanceId, loaiThaoTac);
 
         switch (activityId) {
-            case "Task_NhapThongTinMaHang" -> log.info("[CatalogDelegate] Tiếp nhận thông tin khai báo mã hàng: {}", execution.getVariable("maSo"));
-            case "Task_CapNhatThongTinMaHang" -> log.info("[CatalogDelegate] Tiếp nhận cập nhật mã hàng ID: {}", execution.getVariable("productId"));
-            case "Task_YeuCauXoaHoacNgung" -> log.info("[CatalogDelegate] Tiếp nhận yêu cầu xóa/ngưng mã hàng ID: {}", execution.getVariable("productId"));
+            case "Task_NhapThongTinMaHang" ->
+                log.info("[CatalogDelegate] Tiếp nhận thông tin khai báo mã hàng: {}", execution.getVariable("maSo"));
+            case "Task_CapNhatThongTinMaHang" ->
+                log.info("[CatalogDelegate] Tiếp nhận cập nhật mã hàng ID: {}", execution.getVariable("productId"));
+            case "Task_YeuCauXoaHoacNgung" -> log.info("[CatalogDelegate] Tiếp nhận yêu cầu xóa/ngưng mã hàng ID: {}",
+                    execution.getVariable("productId"));
             case "Task_KiemTraTrungMa" -> handleKiemTraTrungMa(execution);
             case "Task_KiemTraTenGanGiong" -> handleKiemTraTenGanGiong(execution);
             case "Task_LuuMaHang" -> handleLuuMaHang(execution, username);
@@ -70,7 +80,8 @@ public class CatalogProcessDelegate implements JavaDelegate {
     private void handleKiemTraTrungMa(DelegateExecution execution) {
         Long existingProductId = getLong(execution, "productId");
         if (existingProductId != null) {
-            log.info("[Task_KiemTraTrungMa] Mã hàng đã được khởi tạo trước (ID: {}), bỏ qua kiểm tra trùng.", existingProductId);
+            log.info("[Task_KiemTraTrungMa] Mã hàng đã được khởi tạo trước (ID: {}), bỏ qua kiểm tra trùng.",
+                    existingProductId);
             execution.setVariable("maTrungMa", false);
             return;
         }
@@ -95,7 +106,8 @@ public class CatalogProcessDelegate implements JavaDelegate {
     }
 
     /**
-     * Kiểm tra tên hàng gần giống. Set biến tenGanGiong / tenTrungHoanToan cho Gateway.
+     * Kiểm tra tên hàng gần giống. Set biến tenGanGiong / tenTrungHoanToan cho
+     * Gateway.
      */
     private void handleKiemTraTenGanGiong(DelegateExecution execution) {
         Boolean forceSave = (Boolean) execution.getVariable("forceSave");
@@ -124,7 +136,8 @@ public class CatalogProcessDelegate implements JavaDelegate {
         Long existingProductId = getLong(execution, "productId");
         if (existingProductId != null) {
             execution.setVariable("maSoSaved", execution.getVariable("maSo"));
-            log.info("[Task_LuuMaHang] Mã hàng đã tồn tại từ trước (ID: {}), ghi nhận tiến trình Camunda.", existingProductId);
+            log.info("[Task_LuuMaHang] Mã hàng đã tồn tại từ trước (ID: {}), ghi nhận tiến trình Camunda.",
+                    existingProductId);
             return;
         }
 
@@ -142,28 +155,22 @@ public class CatalogProcessDelegate implements JavaDelegate {
         }
     }
 
-    /**
-     * Khởi tạo thẻ kho (Inventory) cho mã hàng vừa tạo.
-     * ProductService.createProduct đã tạo Inventory trong cùng transaction khi lưu,
-     * nên bước này xác nhận và log trạng thái.
-     */
     private void handleKhoiTaoTheKho(DelegateExecution execution, String username) {
         Long productId = (Long) execution.getVariable("productId");
-        String maSo   = (String) execution.getVariable("maSoSaved");
+        String maSo = (String) execution.getVariable("maSoSaved");
         if (productId == null) {
             throw new BpmnError("ERR_INIT_STOCK_FAILED",
                     "Không tìm thấy productId trong process variables — thẻ kho chưa được khởi tạo.");
         }
-        // Inventory đã được tạo trong handleLuuMaHang (ProductService.createProductForCamunda)
         execution.setVariable("theKhoKhoiTao", true);
         log.info("""
-            \n================================================================================
-            📦 [CAMUNDA CATALOG STEP - KHỞI TẠO THẺ KHO]
-            ▶ Mã hàng               : {} (ID: {})
-            ▶ Người thực hiện       : {}
-            ▶ Kết quả               : Khởi tạo thẻ kho thành công (tồn ban đầu = 0)
-            ================================================================================
-            """, maSo, productId, username);
+                \n================================================================================
+                [CAMUNDA CATALOG STEP - KHỞI TẠO THẺ KHO]
+                ▶ Mã hàng               : {} (ID: {})
+                ▶ Người thực hiện       : {}
+                ▶ Kết quả               : Khởi tạo thẻ kho thành công (tồn ban đầu = 0)
+                ================================================================================
+                """, maSo, productId, username);
     }
 
     /**
@@ -172,27 +179,28 @@ public class CatalogProcessDelegate implements JavaDelegate {
      */
     private void handleKhoiTaoDongKKTS(DelegateExecution execution, String username) {
         Long productId = (Long) execution.getVariable("productId");
-        String maSo   = (String) execution.getVariable("maSoSaved");
+        String maSo = (String) execution.getVariable("maSoSaved");
         if (productId == null) {
             throw new BpmnError("ERR_INIT_STOCK_FAILED",
                     "Không tìm thấy productId — không thể xác nhận dòng KKTS.");
         }
-        // Kkts đã được tạo trong handleLuuMaHang (ProductService.createProductForCamunda)
+        // Kkts đã được tạo trong handleLuuMaHang
+        // (ProductService.createProductForCamunda)
         execution.setVariable("kktsKhoiTao", true);
         log.info("""
-            \n================================================================================
-            📊 [CAMUNDA CATALOG STEP - KHỞI TẠO BẢNG KÊ KKTS]
-            ▶ Mã hàng               : {} (ID: {})
-            ▶ Người thực hiện       : {}
-            ▶ Kết quả               : Khởi tạo dòng KKTS thành công (tồn SL=0, tồn tiền=0)
-            ================================================================================
-            """, maSo, productId, username);
+                \n================================================================================
+                [CAMUNDA CATALOG STEP - KHỞI TẠO BẢNG KÊ KKTS]
+                ▶ Mã hàng               : {} (ID: {})
+                ▶ Người thực hiện       : {}
+                ▶ Kết quả               : Khởi tạo dòng KKTS thành công (tồn SL=0, tồn tiền=0)
+                ================================================================================
+                """, maSo, productId, username);
     }
 
     // ─── NHÁNH 2: CẬP NHẬT ───────────────────────────────────────────────────
 
     private void handleKiemTraDuLieuCapNhat(DelegateExecution execution) {
-        String tenHang  = (String) execution.getVariable("tenHang");
+        String tenHang = (String) execution.getVariable("tenHang");
         String nhomHang = (String) execution.getVariable("nhomHang");
         String donViTinh = (String) execution.getVariable("donViTinh");
         if (tenHang == null || tenHang.isBlank()) {
@@ -244,7 +252,8 @@ public class CatalogProcessDelegate implements JavaDelegate {
                 productService.deactivateProduct(productId);
                 log.info("[Task_ChuyenTrangThaiNgung] Đã chuyển mã hàng ID {} sang NGƯNG SỬ DỤNG.", productId);
             } catch (Exception e) {
-                log.info("[Task_ChuyenTrangThaiNgung] Bỏ qua chuyển trạng thái ngưng cho ID {}: {}", productId, e.getMessage());
+                log.info("[Task_ChuyenTrangThaiNgung] Bỏ qua chuyển trạng thái ngưng cho ID {}: {}", productId,
+                        e.getMessage());
             }
         }
     }
@@ -268,30 +277,26 @@ public class CatalogProcessDelegate implements JavaDelegate {
         String maSo = firstNonNull(
                 (String) execution.getVariable("maSoSaved"),
                 (String) execution.getVariable("maSo"),
-                "N/A"
-        );
+                "N/A");
         String tenHang = (String) execution.getVariable("tenHang");
 
         log.info("""
-            \n================================================================================
-            📋 [CAMUNDA CATALOG RESULT - KẾT QUẢ QUY TRÌNH DANH MỤC ẤN PHẨM]
-            ▶ Thao tác              : {}
-            ▶ Mã hàng               : {}
-            ▶ Tên hàng              : {}
-            ▶ Người thực hiện       : {}
-            ▶ Process Instance ID   : {}
-            ▶ Trạng thái            : Hoàn tất thành công quy trình Camunda
-            ================================================================================
-            """,
-            loaiThaoTac,
-            maSo,
-            tenHang != null ? tenHang : "N/A",
-            username,
-            execution.getProcessInstanceId()
-        );
+                \n================================================================================
+                [CAMUNDA CATALOG RESULT - KẾT QUẢ QUY TRÌNH DANH MỤC ẤN PHẨM]
+                ▶ Thao tác              : {}
+                ▶ Mã hàng               : {}
+                ▶ Tên hàng              : {}
+                ▶ Người thực hiện       : {}
+                ▶ Process Instance ID   : {}
+                ▶ Trạng thái            : Hoàn tất thành công quy trình Camunda
+                ================================================================================
+                """,
+                loaiThaoTac,
+                maSo,
+                tenHang != null ? tenHang : "N/A",
+                username,
+                execution.getProcessInstanceId());
     }
-
-    // ─── HELPERS ──────────────────────────────────────────────────────────────
 
     private CreateProductRequest buildCreateRequest(DelegateExecution execution) {
         CreateProductRequest req = new CreateProductRequest();
@@ -306,24 +311,32 @@ public class CatalogProcessDelegate implements JavaDelegate {
 
     private Long getLong(DelegateExecution execution, String key) {
         Object val = execution.getVariable(key);
-        if (val == null) return null;
-        if (val instanceof Long l) return l;
-        if (val instanceof Integer i) return i.longValue();
-        if (val instanceof Number n) return n.longValue();
+        if (val == null)
+            return null;
+        if (val instanceof Long l)
+            return l;
+        if (val instanceof Integer i)
+            return i.longValue();
+        if (val instanceof Number n)
+            return n.longValue();
         return null;
     }
 
     private BigDecimal getBigDecimal(DelegateExecution execution, String key) {
         Object val = execution.getVariable(key);
-        if (val == null) return BigDecimal.ZERO;
-        if (val instanceof BigDecimal bd) return bd;
-        if (val instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
+        if (val == null)
+            return BigDecimal.ZERO;
+        if (val instanceof BigDecimal bd)
+            return bd;
+        if (val instanceof Number n)
+            return BigDecimal.valueOf(n.doubleValue());
         return BigDecimal.ZERO;
     }
 
     private String firstNonNull(String... values) {
         for (String v : values) {
-            if (v != null) return v;
+            if (v != null)
+                return v;
         }
         return null;
     }

@@ -104,7 +104,11 @@ export const productService = {
 
   updateProduct: (id: number, data: UpdateProductRequest) => api.put<Product>(`/products/${id}`, data),
 
-  deactivateProduct: (id: number) => api.delete<void>(`/products/${id}`),
+  deactivateProduct: (id: number) => api.patch<void>(`/products/${id}/deactivate`),
+
+  activateProduct: (id: number) => api.patch<void>(`/products/${id}/activate`),
+
+  deleteProduct: (id: number) => api.delete<void>(`/products/${id}`),
 
   getGroups: () => api.get<ProductGroup[]>('/products/groups'),
 

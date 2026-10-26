@@ -34,7 +34,8 @@ public class ExportController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        PageResponse<ExportResponse> response = exportService.getExports(soPhieu, noiNhan, fromDate, toDate, trangThai, pageable);
+        PageResponse<ExportResponse> response = exportService.getExports(soPhieu, noiNhan, fromDate, toDate, trangThai,
+                pageable);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -49,9 +50,9 @@ public class ExportController {
     public ResponseEntity<ApiResponse<ExportResponse>> createExport(
             @Valid @RequestBody ExportRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        // Quy trình xuất được khởi chạy và điều phối bởi Camunda; ExportService chỉ được gọi qua Delegate của BPMN
         ExportResponse response = camundaWorkflowService.startExportProcess(request, userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Tạo phiếu xuất thành công", response));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Tạo phiếu xuất thành công", response));
     }
 
     @PostMapping("/{id}/cancel")

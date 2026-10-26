@@ -27,158 +27,168 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-// Xác thực 2 bước: kiểm tra credentials -> gửi OTP qua email -> xác thực OTP & cấp JWT (3h)
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final AuthenticationManager authenticationManager;
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final AuditLogService auditLogService;
-    private final OtpStore otpStore;
-    private final EmailService emailService;
+        private final AuthenticationManager authenticationManager;
+        private final UserRepository userRepository;
+        private final RoleRepository roleRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final JwtTokenProvider jwtTokenProvider;
+        private final AuditLogService auditLogService;
+        private final OtpStore otpStore;
+        private final EmailService emailService;
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+        private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    public InitiateLoginResponse initiateLogin(LoginRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
+        public InitiateLoginResponse initiateLogin(LoginRequest request) {
+                String email = request.getEmail().trim().toLowerCase();
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+                UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        User user = userRepository.findByEmail(email)
-                .or(() -> userRepository.findByUsername(userDetails.getUsername()))
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với email: " + email));
+                User user = userRepository.findByEmail(email)
+                                .or(() -> userRepository.findByUsername(userDetails.getUsername()))
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Không tìm thấy tài khoản với email: " + email));
 
-        String userEmail = user.getEmail();
-        if (userEmail == null || userEmail.isBlank()) {
-            throw new IllegalStateException(
-                    "Tài khoản chưa có email. Vui lòng liên hệ quản trị viên để cập nhật.");
+                String userEmail = user.getEmail();
+                if (userEmail == null || userEmail.isBlank()) {
+                        throw new IllegalStateException(
+                                        "Tài khoản chưa có email. Vui lòng liên hệ quản trị viên để cập nhật.");
+                }
+
+                String normalizedEmail = userEmail.trim().toLowerCase();
+                if (!request.isForceResend() && otpStore.hasPending(normalizedEmail)) {
+                        long remainingSeconds = otpStore.getRemainingSeconds(normalizedEmail);
+                        log.info("[OTP REUSED] Pending OTP reused for email '{}' (username: {}), {}s remaining",
+                                        normalizedEmail, user.getUsername(), remainingSeconds);
+                        return InitiateLoginResponse.builder()
+                                        .maskedEmail(maskEmail(userEmail))
+                                        .message("Mã OTP đã được gửi trước đó và vẫn còn hiệu lực. Vui lòng kiểm tra hộp thư của bạn.")
+                                        .isNewOtp(false)
+                                        .expiresInSeconds(remainingSeconds)
+                                        .build();
+                }
+
+                String otpCode = generateOtp();
+                otpStore.save(normalizedEmail, otpCode);
+                log.info("================================================================================");
+                log.info("[OTP GENERATED] User: '{}' | Email: '{}' | OTP CODE: [{}] | Expires in: {} minutes",
+                                user.getUsername(), userEmail, otpCode, OtpStore.OTP_TTL_MINUTES);
+                log.info("================================================================================");
+
+                String recipientName = user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName()
+                                : user.getUsername();
+                emailService.sendOtpEmail(userEmail, recipientName, otpCode);
+
+                return InitiateLoginResponse.builder()
+                                .maskedEmail(maskEmail(userEmail))
+                                .message("Mã OTP 6 số đã được gửi đến email của bạn. Mã có hiệu lực trong 5 phút.")
+                                .isNewOtp(true)
+                                .expiresInSeconds(OtpStore.OTP_TTL_MINUTES * 60L)
+                                .build();
         }
 
-        String normalizedEmail = userEmail.trim().toLowerCase();
+        public JwtResponse verifyOtp(String email, String otpCode) {
+                String cleanEmail = email.trim().toLowerCase();
+                if (!otpStore.verify(cleanEmail, otpCode)) {
+                        log.warn("[OTP FAILED] Verification failed for email '{}' with input code: '{}'", cleanEmail,
+                                        otpCode);
+                        throw new BadCredentialsException(
+                                        "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+                }
 
-        // Nếu không yêu cầu gửi lại (forceResend) và đã có mã OTP còn hiệu lực: tái sử dụng mã cũ, không gửi đè email mới
-        if (!request.isForceResend() && otpStore.hasPending(normalizedEmail)) {
-            long remainingSeconds = otpStore.getRemainingSeconds(normalizedEmail);
-            log.info("Pending OTP reused for email '{}' (username: {}), {}s remaining", normalizedEmail, user.getUsername(), remainingSeconds);
-            return InitiateLoginResponse.builder()
-                    .maskedEmail(maskEmail(userEmail))
-                    .message("Mã OTP đã được gửi trước đó và vẫn còn hiệu lực. Vui lòng kiểm tra hộp thư của bạn.")
-                    .isNewOtp(false)
-                    .expiresInSeconds(remainingSeconds)
-                    .build();
+                User user = userRepository.findByEmail(cleanEmail)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Không tìm thấy tài khoản với email: " + cleanEmail));
+
+                String jwt = jwtTokenProvider.generateTokenForUser(user);
+
+                log.info("[OTP SUCCESS] User '{}' (email: '{}') completed 2FA login. JWT issued (3h expiry).",
+                                user.getUsername(), cleanEmail);
+                auditLogService.logAction(user.getUsername(), "LOGIN", "USER", user.getUsername(),
+                                "Người dùng đăng nhập hệ thống qua email (xác thực OTP thành công)");
+
+                List<String> roleNames = user.getRoles().stream()
+                                .map(r -> r.getName())
+                                .toList();
+
+                return JwtResponse.builder()
+                                .token(jwt)
+                                .id(user.getId())
+                                .username(user.getUsername())
+                                .fullName(user.getFullName())
+                                .roles(roleNames)
+                                .build();
         }
 
-        String otpCode = generateOtp();
-        otpStore.save(normalizedEmail, otpCode);
-        log.info("OTP generated for email '{}' (username: {}): {} (email: {})", userEmail, user.getUsername(), otpCode, maskEmail(userEmail));
+        @Transactional
+        public UserResponse register(RegisterRequest request) {
+                if (userRepository.existsByUsername(request.getUsername())) {
+                        throw new IllegalArgumentException("Tên đăng nhập đã tồn tại: " + request.getUsername());
+                }
 
-        String recipientName = user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getUsername();
-        emailService.sendOtpEmail(userEmail, recipientName, otpCode);
+                Set<Role> roles = new HashSet<>();
+                if (request.getRoles() == null || request.getRoles().isEmpty()) {
+                        Role userRole = roleRepository.findByName("USER")
+                                        .orElseThrow(() -> new ResourceNotFoundException("Role USER không tồn tại"));
+                        roles.add(userRole);
+                } else {
+                        for (String roleName : request.getRoles()) {
+                                Role role = roleRepository.findByName(roleName)
+                                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                                "Role không tồn tại: " + roleName));
+                                roles.add(role);
+                        }
+                }
 
-        return InitiateLoginResponse.builder()
-                .maskedEmail(maskEmail(userEmail))
-                .message("Mã OTP 6 số đã được gửi đến email của bạn. Mã có hiệu lực trong 5 phút.")
-                .isNewOtp(true)
-                .expiresInSeconds(OtpStore.OTP_TTL_MINUTES * 60L)
-                .build();
-    }
+                User user = User.builder()
+                                .username(request.getUsername())
+                                .password(passwordEncoder.encode(request.getPassword()))
+                                .fullName(request.getFullName())
+                                .email(request.getEmail())
+                                .phone(request.getPhone())
+                                .roles(roles)
+                                .build();
 
-    public JwtResponse verifyOtp(String email, String otpCode) {
-        String cleanEmail = email.trim().toLowerCase();
-        if (!otpStore.verify(cleanEmail, otpCode)) {
-            throw new BadCredentialsException(
-                    "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+                userRepository.save(user);
+                return mapToUserResponse(user);
         }
 
-        User user = userRepository.findByEmail(cleanEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với email: " + cleanEmail));
-
-        String jwt = jwtTokenProvider.generateTokenForUser(user);
-
-        log.info("User '{}' (email: '{}') completed 2FA login. JWT issued (3h expiry).", user.getUsername(), cleanEmail);
-        auditLogService.logAction(user.getUsername(), "LOGIN", "USER", user.getUsername(), "Người dùng đăng nhập hệ thống qua email (xác thực OTP thành công)");
-
-        List<String> roleNames = user.getRoles().stream()
-                .map(r -> r.getName())
-                .toList();
-
-        return JwtResponse.builder()
-                .token(jwt)
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .roles(roleNames)
-                .build();
-    }
-
-    @Transactional
-    public UserResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException("Tên đăng nhập đã tồn tại: " + request.getUsername());
+        private String generateOtp() {
+                int code = 100000 + SECURE_RANDOM.nextInt(900000);
+                return String.valueOf(code);
         }
 
-        Set<Role> roles = new HashSet<>();
-        if (request.getRoles() == null || request.getRoles().isEmpty()) {
-            Role userRole = roleRepository.findByName("USER")
-                    .orElseThrow(() -> new ResourceNotFoundException("Role USER không tồn tại"));
-            roles.add(userRole);
-        } else {
-            for (String roleName : request.getRoles()) {
-                Role role = roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new ResourceNotFoundException("Role không tồn tại: " + roleName));
-                roles.add(role);
-            }
+        // Che email hiển thị (ví dụ: ng*****@gmail.com)
+        private String maskEmail(String email) {
+                int atIdx = email.indexOf('@');
+                if (atIdx <= 2)
+                        return email;
+                String local = email.substring(0, atIdx);
+                String domain = email.substring(atIdx);
+                String visible = local.substring(0, Math.min(2, local.length()));
+                return visible + "*".repeat(Math.max(3, local.length() - 2)) + domain;
         }
 
-        User user = User.builder()
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .roles(roles)
-                .build();
-
-        userRepository.save(user);
-        return mapToUserResponse(user);
-    }
-
-    private String generateOtp() {
-        int code = 100000 + SECURE_RANDOM.nextInt(900000);
-        return String.valueOf(code);
-    }
-
-    // Che email hiển thị (ví dụ: ng*****@gmail.com)
-    private String maskEmail(String email) {
-        int atIdx = email.indexOf('@');
-        if (atIdx <= 2) return email;
-        String local = email.substring(0, atIdx);
-        String domain = email.substring(atIdx);
-        String visible = local.substring(0, Math.min(2, local.length()));
-        return visible + "*".repeat(Math.max(3, local.length() - 2)) + domain;
-    }
-
-    private UserResponse mapToUserResponse(User user) {
-        List<String> roleNames = user.getRoles().stream()
-                .map(r -> r.getName())
-                .toList();
-        return UserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .isActive(user.getIsActive())
-                .roles(roleNames)
-                .createdAt(user.getCreatedAt())
-                .build();
-    }
+        private UserResponse mapToUserResponse(User user) {
+                List<String> roleNames = user.getRoles().stream()
+                                .map(r -> r.getName())
+                                .toList();
+                return UserResponse.builder()
+                                .id(user.getId())
+                                .username(user.getUsername())
+                                .fullName(user.getFullName())
+                                .email(user.getEmail())
+                                .phone(user.getPhone())
+                                .isActive(user.getIsActive())
+                                .roles(roleNames)
+                                .createdAt(user.getCreatedAt())
+                                .build();
+        }
 }

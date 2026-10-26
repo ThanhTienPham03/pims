@@ -19,25 +19,26 @@ public class OtpStore {
 
     public void save(String username, String otpCode) {
         store.put(username, new OtpEntry(otpCode, LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES)));
-        log.debug("OTP saved for user '{}', expires at {}", username, store.get(username).expiredAt());
+        log.info("[OTP STORE] OTP saved for '{}', expires at {}", username, store.get(username).expiredAt());
     }
 
     public boolean verify(String username, String otpCode) {
         OtpEntry entry = store.get(username);
         if (entry == null) {
-            log.warn("No OTP found for user '{}'", username);
+            log.warn("[OTP STORE] No OTP found for user/email '{}'", username);
             return false;
         }
         if (LocalDateTime.now().isAfter(entry.expiredAt())) {
             store.remove(username);
-            log.warn("OTP expired for user '{}'", username);
+            log.warn("[OTP STORE] OTP expired for user/email '{}'", username);
             return false;
         }
         if (!entry.code().equals(otpCode)) {
-            log.warn("Invalid OTP for user '{}'", username);
+            log.warn("[OTP STORE] Invalid OTP entered for user/email '{}'", username);
             return false;
         }
         store.remove(username);
+        log.info("[OTP STORE] OTP verified successfully and consumed for user/email '{}'", username);
         return true;
     }
 

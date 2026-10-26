@@ -22,10 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * CamundaWorkflowService — Cầu nối tự động kích hoạt và đồng bộ trạng thái giữa
- * các nghiệp vụ hệ thống (Nhập, Xuất, Khóa sổ) với Camunda 7 Workflow Engine.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,14 +37,8 @@ public class CamundaWorkflowService {
     private CamundaDmnService camundaDmnService;
 
     private final InventoryTransactionRepository transactionRepository;
-
-    // Ngưỡng dự phòng khi không có DMN: >= 50.000.000 VNĐ
     private static final BigDecimal APPROVAL_THRESHOLD = new BigDecimal("50000000");
 
-    /**
-     * Khởi chạy quy trình Xuất ấn phẩm (Process_XuatAnPham) do Camunda dẫn đầu.
-     * Service chỉ được phép thực thi bên trong Delegate của Camunda khi token đi qua Service Task.
-     */
     @Transactional
     public ExportResponse startExportProcess(ExportRequest request, String username) {
         if (runtimeService == null || taskService == null) {
@@ -80,7 +70,8 @@ public class CamundaWorkflowService {
 
             ExportResponse response = ExportProcessDelegate.currentExportResponse.get();
             if (response == null) {
-                log.warn("[Camunda Driven] Quy trình xuất hoàn tất nhưng chưa có ExportResponse (có thể đang chờ phê duyệt hoặc kết thúc sớm)");
+                log.warn(
+                        "[Camunda Driven] Quy trình xuất hoàn tất nhưng chưa có ExportResponse (có thể đang chờ phê duyệt hoặc kết thúc sớm)");
             }
             return response;
         } catch (Exception e) {
@@ -92,10 +83,6 @@ public class CamundaWorkflowService {
         }
     }
 
-    /**
-     * Khởi chạy quy trình Nhập ấn phẩm (Process_NhapAnPham) do Camunda dẫn đầu.
-     * Service chỉ được phép thực thi bên trong Delegate của Camunda khi token đi qua Service Task.
-     */
     @Transactional
     public ImportResponse startImportProcess(ImportRequest request, String username) {
         if (runtimeService == null || taskService == null) {
@@ -116,7 +103,8 @@ public class CamundaWorkflowService {
             ProcessInstance pi = runtimeService.startProcessInstanceByKey("Process_NhapAnPham", bKey, vars);
             log.info("[Camunda Driven] Đã khởi chạy Process_NhapAnPham. Instance ID: {}", pi.getId());
 
-            // Tự động hoàn thành các bước nhập dữ liệu ban đầu trên form để tiến đến bước thẩm định và ghi nhận
+            // Tự động hoàn thành các bước nhập dữ liệu ban đầu trên form để tiến đến bước
+            // thẩm định và ghi nhận
             int maxSteps = 10;
             while (maxSteps-- > 0) {
                 List<Task> activeTasks = taskService.createTaskQuery().processInstanceId(pi.getId()).list();
@@ -177,13 +165,15 @@ public class CamundaWorkflowService {
             if (current instanceof saigonbank.fit.ims.exception.ProductNotFoundException pne) {
                 throw pne;
             }
-            if (current.getCause() == current) break;
+            if (current.getCause() == current)
+                break;
             current = current.getCause();
         }
     }
 
     /**
-     * @deprecated Sử dụng {@link #startExportProcess(ExportRequest, String)} để Camunda điều phối thực sự.
+     * @deprecated Sử dụng {@link #startExportProcess(ExportRequest, String)} để
+     *             Camunda điều phối thực sự.
      */
     @Deprecated
     @Transactional
@@ -228,7 +218,8 @@ public class CamundaWorkflowService {
             vars.put("xuatHetTon", false);
 
             ProcessInstance pi = runtimeService.startProcessInstanceByKey("Process_XuatAnPham", soPhieu, vars);
-            log.info("[Camunda Auto] Đã kích hoạt Process_XuatAnPham cho phiếu {}. Instance ID: {} | Cần duyệt: {} ({})",
+            log.info(
+                    "[Camunda Auto] Đã kích hoạt Process_XuatAnPham cho phiếu {}. Instance ID: {} | Cần duyệt: {} ({})",
                     soPhieu, pi.getId(), canPheDuyet, capPheDuyet);
 
             boolean isEnded = pi.isEnded();
@@ -238,13 +229,11 @@ public class CamundaWorkflowService {
                 transactionRepository.save(tx);
             });
         } catch (Exception e) {
-            log.error("[Camunda Auto] Lỗi khi kích hoạt Process_XuatAnPham cho phiếu {}: {}", response.getSoPhieu(), e.getMessage());
+            log.error("[Camunda Auto] Lỗi khi kích hoạt Process_XuatAnPham cho phiếu {}: {}", response.getSoPhieu(),
+                    e.getMessage());
         }
     }
 
-    /**
-     * @deprecated Sử dụng {@link #startImportProcess(ImportRequest, String)} để Camunda điều phối thực sự.
-     */
     @Deprecated
     @Transactional
     public void startImportWorkflow(ImportResponse response, String username) {
@@ -265,7 +254,8 @@ public class CamundaWorkflowService {
             vars.put("username", username);
 
             ProcessInstance pi = runtimeService.startProcessInstanceByKey("Process_NhapAnPham", soPhieu, vars);
-            log.info("[Camunda Auto] Đã kích hoạt Process_NhapAnPham cho phiếu {}. Instance ID: {}", soPhieu, pi.getId());
+            log.info("[Camunda Auto] Đã kích hoạt Process_NhapAnPham cho phiếu {}. Instance ID: {}", soPhieu,
+                    pi.getId());
 
             boolean isEnded = pi.isEnded();
             transactionRepository.findById(response.getId()).ifPresent(tx -> {
@@ -274,38 +264,30 @@ public class CamundaWorkflowService {
                 transactionRepository.save(tx);
             });
         } catch (Exception e) {
-            log.error("[Camunda Auto] Lỗi khi kích hoạt Process_NhapAnPham cho phiếu {}: {}", response.getSoPhieu(), e.getMessage());
+            log.error("[Camunda Auto] Lỗi khi kích hoạt Process_NhapAnPham cho phiếu {}: {}", response.getSoPhieu(),
+                    e.getMessage());
         }
     }
 
-    /**
-     * Tự động kích hoạt quy trình Khóa sổ kỳ kế toán (Process_ChotSoThang)
-     */
     public void startClosingWorkflow(Integer year, Integer month, String username) {
-        if (runtimeService == null) return;
+        if (runtimeService == null)
+            return;
         try {
             String bKey = "CLOSING-" + year + "-" + String.format("%02d", month);
             Map<String, Object> vars = Map.of(
                     "year", year,
                     "month", month,
                     "username", username,
-                    "duyetChot", true
-            );
+                    "duyetChot", true);
             ProcessInstance pi = runtimeService.startProcessInstanceByKey("Process_ChotSoThang", bKey, vars);
-            log.info("[Camunda Auto] Đã kích hoạt Process_ChotSoThang cho kỳ {}/{}. Instance ID: {}", month, year, pi.getId());
+            log.info("[Camunda Auto] Đã kích hoạt Process_ChotSoThang cho kỳ {}/{}. Instance ID: {}", month, year,
+                    pi.getId());
         } catch (Exception e) {
-            log.error("[Camunda Auto] Lỗi khi kích hoạt Process_ChotSoThang cho kỳ {}/{}: {}", month, year, e.getMessage());
+            log.error("[Camunda Auto] Lỗi khi kích hoạt Process_ChotSoThang cho kỳ {}/{}: {}", month, year,
+                    e.getMessage());
         }
     }
 
-    /**
-     * Khởi chạy quy trình Quản lý Danh mục Ấn phẩm (Process_QuanLyDanhMucAnPham).
-     *
-     * @param loaiThaoTac  Loại thao tác: {@code TAO_MOI} | {@code CAP_NHAT} | {@code XOA_NGUNG}
-     * @param variables    Các biến nghiệp vụ cần truyền vào process (maSo, tenHang, nhomHang, v.v.)
-     * @param username     Người thực hiện
-     * @return Process Instance ID để frontend theo dõi trạng thái
-     */
     public String startCatalogWorkflow(String loaiThaoTac, Map<String, Object> variables, String username) {
         if (runtimeService == null) {
             log.warn("[Camunda Auto] RuntimeService không khả dụng, bỏ qua quy trình danh mục.");
@@ -325,7 +307,8 @@ public class CamundaWorkflowService {
             ProcessInstance pi = runtimeService.startProcessInstanceByKey(
                     "Process_QuanLyDanhMucAnPham", bKey, vars);
 
-            log.info("[Camunda Auto] Đã kích hoạt Process_QuanLyDanhMucAnPham | loaiThaoTac={} | maSo={} | Instance ID: {}",
+            log.info(
+                    "[Camunda Auto] Đã kích hoạt Process_QuanLyDanhMucAnPham | loaiThaoTac={} | maSo={} | Instance ID: {}",
                     loaiThaoTac, maSo, pi.getId());
             return pi.getId();
         } catch (Exception e) {
@@ -335,10 +318,6 @@ public class CamundaWorkflowService {
         }
     }
 
-
-    /**
-     * Hoàn thành User Task và tự động cập nhật trạng thái trong CSDL
-     */
     @Transactional
     public void completeUserTask(String taskId, Map<String, Object> variables) {
         if (taskService == null) {
@@ -374,7 +353,8 @@ public class CamundaWorkflowService {
                     .ifPresent(tx -> {
                         tx.setWorkflowStatus(status);
                         transactionRepository.save(tx);
-                        log.info("[Camunda Auto] Đã cập nhật workflowStatus của phiếu {} thành {}", tx.getTransactionCode(), status);
+                        log.info("[Camunda Auto] Đã cập nhật workflowStatus của phiếu {} thành {}",
+                                tx.getTransactionCode(), status);
                     });
         } catch (Exception e) {
             log.warn("[Camunda Auto] Không thể cập nhật workflowStatus: {}", e.getMessage());

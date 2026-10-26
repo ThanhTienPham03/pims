@@ -66,9 +66,6 @@ public class CamundaController {
         }
     }
 
-    // ==========================================
-    // 0. CAMUNDA DMN EVALUATION (BẢNG QUYẾT ĐỊNH)
-    // ==========================================
     @PostMapping("/decision/export-approval")
     public ResponseEntity<?> evaluateExportApprovalDecision(
             @RequestParam(defaultValue = "VPP") String nhomHang,
@@ -78,9 +75,6 @@ public class CamundaController {
         return ResponseEntity.ok(result);
     }
 
-    // ==========================================
-    // 1. QUY TRÌNH XUẤT ẤN PHẨM (APPROVAL FLOW)
-    // ==========================================
     @PostMapping("/export/start")
     public ResponseEntity<?> startExportProcess(
             @RequestParam(defaultValue = "100000000") Double tongTien,
@@ -106,9 +100,6 @@ public class CamundaController {
         }
     }
 
-    // ==========================================
-    // 2. QUY TRÌNH NHẬP ẤN PHẨM
-    // ==========================================
     @PostMapping("/import/start")
     public ResponseEntity<?> startImportProcess(
             @RequestParam(defaultValue = "Nhập ấn phẩm đợt mới") String lyDoNhap,
@@ -158,10 +149,6 @@ public class CamundaController {
         }
     }
 
-    // ==========================================
-    // 4. QUY TRÌNH QUẢN LÝ DANH MỤC ẤN PHẨM
-    // ==========================================
-
     @PostMapping("/catalog/start")
     public ResponseEntity<?> startCatalogProcess(
             @RequestParam(defaultValue = "TAO_MOI") String loaiThaoTac,
@@ -197,9 +184,6 @@ public class CamundaController {
         }
     }
 
-    // ==========================================
-    // 4. QUẢN LÝ USER TASK (DANH SÁCH & PHÊ DUYỆT)
-    // ==========================================
     @GetMapping("/tasks")
     public ResponseEntity<?> listActiveTasks(@RequestParam(required = false) String processInstanceId) {
         var query = taskService.createTaskQuery();

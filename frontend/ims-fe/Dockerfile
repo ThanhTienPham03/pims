@@ -1,7 +1,3 @@
-# ==============================================================================
-# PIMS Frontend - Multi-stage Dockerfile (Vite + React + Nginx)
-# ==============================================================================
-
 # ----------------- STAGE 1: Build Static Assets -----------------
 FROM node:22-alpine AS builder
 WORKDIR /app

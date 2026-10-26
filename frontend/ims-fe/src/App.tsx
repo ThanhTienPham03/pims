@@ -76,12 +76,12 @@ export function App() {
         return;
       }
       const prefix = log.action === 'CREATE' ? ' Tạo mới: '
-        : log.action === 'CANCEL' ? ' Hủy bỏ: '
-          : log.action === 'DELETE' ? ' Xóa: '
-            : log.action === 'UPDATE' ? ' Cập nhật: '
-              : log.action === 'LOCK_MONTH' ? ' Khóa sổ: '
-                : log.action === 'UNLOCK_MONTH' ? ' Mở khóa: '
-                  : ' ';
+                   : log.action === 'CANCEL' ? ' Hủy bỏ: '
+                   : log.action === 'DELETE' ? ' Xóa: '
+                   : log.action === 'UPDATE' ? ' Cập nhật: '
+                   : log.action === 'LOCK_MONTH' ? ' Khóa sổ: '
+                   : log.action === 'UNLOCK_MONTH' ? ' Mở khóa: '
+                   : ' ';
       showToast(`${prefix}${log.description || `${log.username} đã thực hiện ${log.action}`}`, 'info');
     });
 

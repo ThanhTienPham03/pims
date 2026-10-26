@@ -14,12 +14,7 @@ import saigonbank.fit.ims.service.ExportService;
 
 import java.math.BigDecimal;
 
-/**
- * ExportProcessDelegate — Xử lý các bước tự động trong Quy trình Xuất Ấn Phẩm (BPMN).
- * 
- * 1. Task_KiemTraKho: Thẩm định tồn kho và quyết định phê duyệt bằng bảng quyết định DMN (Decision_PheDuyetXuat).
- * 2. Task_GhiNhanXuatKho: Cấp số phiếu, cập nhật tồn kho & thẻ kho qua ExportService.
- */
+
 @Component("exportProcessDelegate")
 public class ExportProcessDelegate implements JavaDelegate {
 
@@ -41,7 +36,8 @@ public class ExportProcessDelegate implements JavaDelegate {
         String activityId = execution.getCurrentActivityId();
         String processInstanceId = execution.getProcessInstanceId();
 
-        log.info("[Camunda BPMN - Xuất Ấn Phẩm] Thực thi bước: {} | Process Instance ID: {}", activityId, processInstanceId);
+        log.info("[Camunda BPMN - Xuất Ấn Phẩm] Thực thi bước: {} | Process Instance ID: {}", activityId,
+                processInstanceId);
 
         if ("Task_CapSoVaGhiNhan".equals(activityId)) {
             handleGhiNhanXuat(execution);
@@ -61,7 +57,8 @@ public class ExportProcessDelegate implements JavaDelegate {
         }
 
         if (camundaDmnService != null) {
-            var decision = camundaDmnService.evaluateExportApproval(nhomHang, tongTien, (String) execution.getVariable("lyDoXuat"));
+            var decision = camundaDmnService.evaluateExportApproval(nhomHang, tongTien,
+                    (String) execution.getVariable("lyDoXuat"));
             execution.setVariable("canPheDuyet", decision.getCanPheDuyet());
             execution.setVariable("capPheDuyet", decision.getCapPheDuyet());
             execution.setVariable("hanDuyetGio", decision.getHanDuyetGio());
@@ -82,7 +79,8 @@ public class ExportProcessDelegate implements JavaDelegate {
         String processInstanceId = execution.getProcessInstanceId();
         Object reqObj = execution.getVariable("exportRequest");
         String username = (String) execution.getVariable("username");
-        if (username == null) username = "camunda_system";
+        if (username == null)
+            username = "camunda_system";
 
         if (reqObj instanceof ExportRequest exportRequest && exportService != null) {
             ExportResponse resp = exportService.createExport(exportRequest, username);
@@ -99,16 +97,16 @@ public class ExportProcessDelegate implements JavaDelegate {
             }
 
             log.info("""
-                \n================================================================================
-                📤 [CAMUNDA EXPORT RESULT - KẾT QUẢ QUY TRÌNH XUẤT ẤN PHẨM]
-                ▶ Bước thực thi         : {}
-                ▶ Process Instance ID   : {}
-                ▶ Số phiếu xuất         : {}
-                ▶ Tổng tiền             : {}
-                ▶ Người thực hiện       : {}
-                ▶ Kết quả               : Đã ghi nhận phiếu xuất thành công
-                ================================================================================
-                """, activityId, processInstanceId, resp.getSoPhieu(), resp.getTongTien(), username);
+                    \n================================================================================
+                    [CAMUNDA EXPORT RESULT - KẾT QUẢ QUY TRÌNH XUẤT ẤN PHẨM]
+                    ▶ Bước thực thi         : {}
+                    ▶ Process Instance ID   : {}
+                    ▶ Số phiếu xuất         : {}
+                    ▶ Tổng tiền             : {}
+                    ▶ Người thực hiện       : {}
+                    ▶ Kết quả               : Đã ghi nhận phiếu xuất thành công
+                    ================================================================================
+                    """, activityId, processInstanceId, resp.getSoPhieu(), resp.getTongTien(), username);
         } else {
             // Trường hợp phiếu đã được tạo sẵn từ Controller hoặc chạy mô phỏng
             String existingSoPhieu = (String) execution.getVariable("soPhieu");
@@ -117,15 +115,15 @@ public class ExportProcessDelegate implements JavaDelegate {
                 execution.setVariable("soPhieu", existingSoPhieu);
             }
             log.info("""
-                \n================================================================================
-                📤 [CAMUNDA EXPORT RESULT - KẾT QUẢ BƯỚC XUẤT ẤN PHẨM]
-                ▶ Bước thực thi         : {}
-                ▶ Process Instance ID   : {}
-                ▶ Số phiếu              : {}
-                ▶ Người thực hiện       : {}
-                ▶ Kết quả               : Phiếu sẵn sàng để Thủ kho xác nhận
-                ================================================================================
-                """, activityId, processInstanceId, existingSoPhieu, username);
+                    \n================================================================================
+                    [CAMUNDA EXPORT RESULT - KẾT QUẢ BƯỚC XUẤT ẤN PHẨM]
+                    ▶ Bước thực thi         : {}
+                    ▶ Process Instance ID   : {}
+                    ▶ Số phiếu              : {}
+                    ▶ Người thực hiện       : {}
+                    ▶ Kết quả               : Phiếu sẵn sàng để Thủ kho xác nhận
+                    ================================================================================
+                    """, activityId, processInstanceId, existingSoPhieu, username);
         }
     }
 }

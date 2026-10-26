@@ -20,3 +20,9 @@ dist-ssr/
 *.iml
 *.DS_Store
 Thumbs.db
+
+# Logs
+*.log
+log.txt
+logs/
+

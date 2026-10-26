@@ -10,6 +10,12 @@ target/
 .env.local
 !.env.example
 
+### Logs ###
+*.log
+log.txt
+logs/
+
+
 ### STS ###
 .apt_generated
 .classpath

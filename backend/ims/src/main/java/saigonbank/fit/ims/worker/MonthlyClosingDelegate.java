@@ -11,9 +11,7 @@ import saigonbank.fit.ims.service.MonthlyClosingService;
 
 import java.time.LocalDate;
 
-/**
- * MonthlyClosingDelegate — Xử lý bước khóa sổ & kết chuyển KKTS trong Quy trình Chốt Sổ (BPMN).
- */
+
 @Component("monthlyClosingDelegate")
 public class MonthlyClosingDelegate implements JavaDelegate {
 
@@ -25,7 +23,8 @@ public class MonthlyClosingDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) throws Exception {
         String processInstanceId = execution.getProcessInstanceId();
-        log.info("[Camunda BPMN - Chốt Sổ] Đang thực hiện khóa sổ kỳ kế toán. Process Instance ID: {}", processInstanceId);
+        log.info("[Camunda BPMN - Chốt Sổ] Đang thực hiện khóa sổ kỳ kế toán. Process Instance ID: {}",
+                processInstanceId);
 
         Integer year = (Integer) execution.getVariable("year");
         Integer month = (Integer) execution.getVariable("month");
@@ -45,25 +44,25 @@ public class MonthlyClosingDelegate implements JavaDelegate {
             execution.setVariable("closingResult", "SUCCESS");
             execution.setVariable("lockedAt", resp.getLockedAt() != null ? resp.getLockedAt().toString() : "");
             log.info("""
-                \n================================================================================
-                🔒 [CAMUNDA CLOSING RESULT - KẾT QUẢ QUY TRÌNH CHỐT SỔ]
-                ▶ Process Instance ID   : {}
-                ▶ Kỳ kế toán            : Tháng {}/{}
-                ▶ Người thực hiện       : {}
-                ▶ Thời điểm khóa        : {}
-                ▶ Trạng thái            : ĐÃ KHÓA SỔ & KẾT CHUYỂN THÀNH CÔNG
-                ================================================================================
-                """, processInstanceId, month, year, username, resp.getLockedAt());
+                    \n================================================================================
+                    [CAMUNDA CLOSING RESULT - KẾT QUẢ QUY TRÌNH CHỐT SỔ]
+                    ▶ Process Instance ID   : {}
+                    ▶ Kỳ kế toán            : Tháng {}/{}
+                    ▶ Người thực hiện       : {}
+                    ▶ Thời điểm khóa        : {}
+                    ▶ Trạng thái            : ĐÃ KHÓA SỔ & KẾT CHUYỂN THÀNH CÔNG
+                    ================================================================================
+                    """, processInstanceId, month, year, username, resp.getLockedAt());
         } else {
             log.info("""
-                \n================================================================================
-                🔒 [CAMUNDA CLOSING RESULT - KẾT QUẢ QUY TRÌNH CHỐT SỔ (MÔ PHỎNG)]
-                ▶ Process Instance ID   : {}
-                ▶ Kỳ kế toán            : Tháng {}/{}
-                ▶ Người thực hiện       : {}
-                ▶ Trạng thái            : Thành công
-                ================================================================================
-                """, processInstanceId, month, year, username);
+                    \n================================================================================
+                    [CAMUNDA CLOSING RESULT - KẾT QUẢ QUY TRÌNH CHỐT SỔ (MÔ PHỎNG)]
+                    ▶ Process Instance ID   : {}
+                    ▶ Kỳ kế toán            : Tháng {}/{}
+                    ▶ Người thực hiện       : {}
+                    ▶ Trạng thái            : Thành công
+                    ================================================================================
+                    """, processInstanceId, month, year, username);
         }
     }
 }

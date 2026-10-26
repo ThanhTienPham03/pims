@@ -18,12 +18,13 @@ RUN apk add --no-cache tzdata curl && \
     cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime && \
     echo "Asia/Ho_Chi_Minh" > /etc/timezone
 
-# Create non-root user
-RUN addgroup -S pims && adduser -S pims -G pims
+# Create non-root user and grant permissions to /app
+RUN addgroup -S pims && adduser -S pims -G pims && mkdir -p /app/logs && chown -R pims:pims /app
 USER pims
 
 # Copy fat jar from builder
-COPY --from=builder /build/target/*.jar app.jar
+COPY --chown=pims:pims --from=builder /build/target/*.jar app.jar
+
 
 # Expose Spring Boot port
 EXPOSE 8085

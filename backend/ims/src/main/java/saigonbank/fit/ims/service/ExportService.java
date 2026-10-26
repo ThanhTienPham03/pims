@@ -24,28 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * ExportService — tạo, hủy, tra cứu phiếu xuất hàng.
- *
- * Quy trình tạo phiếu xuất:
- * 1. Kiểm tra tháng không bị khóa
- * 2. Nếu có ACQT -> tất cả chi tiết phải là ACQT (phiếu xuất riêng)
- * 3. Kiểm tra tồn kho đủ cho từng chi tiết
- * 4. Tính toán giá trị xuất (theo average price của KKTS tháng trước; fallback: tồn kho hiện tại)
- * 5. Cấp số phiếu (pessimistic lock) — nhóm đại diện theo quy tắc §9
- * 6. Tạo InventoryTransaction + InventoryTransactionDetail
- * 7. Cập nhật Inventory + Kkts
- *
- * Quy tắc nhóm đại diện (§9):
- * - ACQT luôn lập phiếu riêng.
- * - Phiếu chung VPP/ACTT/VLK: nhóm có nhiều dòng hơn làm đại diện.
- * - VPP = ACTT về số dòng → ưu tiên ACTT (priority thấp hơn = ưu tiên cao hơn).
- * - VLK chỉ thắng nếu không có VPP và ACTT.
- *
- * Quy tắc đơn giá xuất (§7.2):
- * - Lấy averagePrice từ KKTS của (năm,tháng) trước ngày xuất.
- * - Nếu chưa có KKTS tháng trước → fallback: averagePrice tồn kho hiện tại.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -63,9 +41,8 @@ public class ExportService {
     // Độ ưu tiên nhóm đại diện khi số dòng bằng nhau (ACTT > VPP > VLK)
     private static final Map<String, Integer> GROUP_PRIORITY = Map.of(
             "ACTT", 1,
-            "VPP",  2,
-            "VLK",  3
-    );
+            "VPP", 2,
+            "VLK", 3);
 
     @Transactional
     public ExportResponse createExport(ExportRequest request, String username) {
@@ -170,12 +147,12 @@ public class ExportService {
                 .collect(Collectors.toMap(
                         User::getUsername,
                         User::getFullName,
-                        (existing, replacement) -> existing
-                ));
+                        (existing, replacement) -> existing));
 
         return PageResponse.<ExportResponse>builder()
                 .content(page.getContent().stream()
-                        .map(tx -> mapToExportResponse(tx, userFullNameMap.getOrDefault(tx.getCreatedBy(), tx.getCreatedBy())))
+                        .map(tx -> mapToExportResponse(tx,
+                                userFullNameMap.getOrDefault(tx.getCreatedBy(), tx.getCreatedBy())))
                         .toList())
                 .pageNumber(page.getNumber())
                 .pageSize(page.getSize())
@@ -208,7 +185,8 @@ public class ExportService {
     private record LineItem(Product product, BigDecimal quantity, BigDecimal unitPrice, BigDecimal amount) {
     }
 
-    // Đơn giá xuất lấy từ KKTS tháng trước (fallback: giá TB tồn kho); nếu xuất hết thì dùng endingAmount
+    // Đơn giá xuất lấy từ KKTS tháng trước (fallback: giá TB tồn kho); nếu xuất hết
+    // thì dùng endingAmount
     private List<LineItem> resolveLineItems(List<ExportDetailRequest> details, LocalDate exportDate) {
         LocalDate prevMonthDate = exportDate.minusMonths(1);
         int prevYear = prevMonthDate.getYear();
@@ -245,7 +223,8 @@ public class ExportService {
         return items;
     }
 
-    // Xác định nhóm đại diện: nhiều dòng hơn thắng, nếu bằng nhau thì ưu tiên theo GROUP_PRIORITY
+    // Xác định nhóm đại diện: nhiều dòng hơn thắng, nếu bằng nhau thì ưu tiên theo
+    // GROUP_PRIORITY
     private String determineGroupCode(List<LineItem> lineItems) {
         Map<String, Long> countByGroup = lineItems.stream()
                 .collect(Collectors.groupingBy(li -> li.product().getNhomHangCode(), Collectors.counting()));
@@ -259,8 +238,7 @@ public class ExportService {
         return groups.stream()
                 .max(Comparator
                         .comparingLong((String g) -> countByGroup.getOrDefault(g, 0L))
-                        .thenComparingInt(g -> -(GROUP_PRIORITY.getOrDefault(g, 99)))
-                )
+                        .thenComparingInt(g -> -(GROUP_PRIORITY.getOrDefault(g, 99))))
                 .orElseThrow(() -> new InvalidExportException("Không thể xác định nhóm hàng đại diện."));
     }
 
@@ -321,7 +299,8 @@ public class ExportService {
     }
 
     private String resolveFullName(String username) {
-        if (username == null || username.isBlank()) return null;
+        if (username == null || username.isBlank())
+            return null;
         return userRepository.findByUsername(username)
                 .map(User::getFullName)
                 .filter(name -> !name.isBlank())
@@ -347,7 +326,8 @@ public class ExportService {
                         .build())
                 .toList();
 
-        String resolvedCreator = (creatorFullName != null && !creatorFullName.isBlank()) ? creatorFullName : tx.getCreatedBy();
+        String resolvedCreator = (creatorFullName != null && !creatorFullName.isBlank()) ? creatorFullName
+                : tx.getCreatedBy();
 
         return ExportResponse.builder()
                 .id(tx.getId())

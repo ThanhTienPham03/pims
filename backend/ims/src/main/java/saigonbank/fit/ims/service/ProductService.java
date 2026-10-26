@@ -19,6 +19,7 @@ import saigonbank.fit.ims.repository.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * ProductService — quản lý sản phẩm.
@@ -142,15 +143,24 @@ public class ProductService {
             throw new ProductAlreadyExistsException("Mã số hàng hóa đã tồn tại: " + request.getMaSo());
         }
 
-        boolean nameWarning = false;
-        String warningMessage = null;
         if (!Boolean.TRUE.equals(request.getForceSaveIfDuplicateName())) {
             List<Product> similar = productRepository.findSimilarName(request.getTenHang(), -1L);
             if (!similar.isEmpty()) {
-                nameWarning = true;
-                warningMessage = "Cảnh báo: Có " + similar.size() + " sản phẩm có tên tương tự.";
+                String existingNames = similar.stream()
+                        .map(p -> p.getMaSo() + " (" + p.getTenHang() + ")")
+                        .limit(3)
+                        .collect(Collectors.joining(", "));
+                String warningMessage = "Cảnh báo: Tên hàng đã tồn tại hoặc gần giống với: " + existingNames
+                        + (similar.size() > 3 ? " và " + (similar.size() - 3) + " sản phẩm khác." : ".");
+
+                log.warn("Cảnh báo tên hàng gần giống/trùng: '{}'. Đã có: {}. Chưa lưu vào DB.", request.getTenHang(), existingNames);
+                return ProductResponse.builder()
+                        .nameWarning(true)
+                        .warningMessage(warningMessage)
+                        .build();
             }
         }
+
 
         ProductGroup productGroup = productGroupRepository.findByCode(request.getNhomHang())
                 .orElseThrow(() -> new ResourceNotFoundException("Nhóm hàng không tồn tại: " + request.getNhomHang()));
@@ -183,7 +193,7 @@ public class ProductService {
         log.info("Created product: {} by {}", product.getMaSo(), username);
         auditLogService.logAction(username, "CREATE", "PRODUCT", product.getMaSo(),
                 "Tạo mã hàng mới: " + product.getMaSo() + " — " + product.getTenHang());
-        return mapToResponse(product, nameWarning, warningMessage);
+        return mapToResponse(product, false, null);
     }
 
     @Transactional
@@ -229,14 +239,36 @@ public class ProductService {
 
     @Transactional
     public void deactivateProduct(Long id) {
+        deactivateProduct(id, null);
+    }
+
+    @Transactional
+    public void deactivateProduct(Long id, String username) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
 
         product.setTrangThai(Product.ProductStatus.NGUNG_SU_DUNG);
         productRepository.save(product);
         log.info("Deactivated product: {}", product.getMaSo());
-        auditLogService.logAction(null, "DEACTIVATE", "PRODUCT", product.getMaSo(),
+        auditLogService.logAction(username, "DEACTIVATE", "PRODUCT", product.getMaSo(),
                 "Ngưng sử dụng mã hàng: " + product.getMaSo() + " — " + product.getTenHang());
+    }
+
+    @Transactional
+    public void activateProduct(Long id) {
+        activateProduct(id, null);
+    }
+
+    @Transactional
+    public void activateProduct(Long id, String username) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
+
+        product.setTrangThai(Product.ProductStatus.HOAT_DONG);
+        productRepository.save(product);
+        log.info("Activated product: {}", product.getMaSo());
+        auditLogService.logAction(username, "ACTIVATE", "PRODUCT", product.getMaSo(),
+                "Kích hoạt lại mã hàng: " + product.getMaSo() + " — " + product.getTenHang());
     }
 
     @Transactional(readOnly = true)

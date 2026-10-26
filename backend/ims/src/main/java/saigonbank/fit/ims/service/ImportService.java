@@ -28,18 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * ImportService — tạo, hủy, tra cứu phiếu nhập hàng.
- *
- * Quy trình tạo phiếu nhập:
- * 1. Kiểm tra tháng không bị khóa
- * 2. Kiểm tra quy tắc ACQT (ACQT lập phiếu riêng, không gộp chung nhóm khác)
- * 3. Xác định nhóm hàng đại diện (nhiều dòng hơn thắng, bằng nhau: ACTT > VPP > VLK)
- * 4. Cấp số phiếu (pessimistic lock trên document_sequences)
- * 5. Tạo InventoryTransaction + InventoryTransactionDetail
- * 6. Cập nhật Inventory (tồn kho hiện tại)
- * 7. Cập nhật Kkts (tồn kho theo kỳ)
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -57,9 +45,8 @@ public class ImportService {
     // Độ ưu tiên nhóm đại diện khi số dòng bằng nhau (ACTT > VPP > VLK)
     private static final Map<String, Integer> GROUP_PRIORITY = Map.of(
             "ACTT", 1,
-            "VPP",  2,
-            "VLK",  3
-    );
+            "VPP", 2,
+            "VLK", 3);
 
     @Transactional
     public ImportResponse createImport(ImportRequest request, String username) {
@@ -150,13 +137,13 @@ public class ImportService {
      */
     @Transactional(readOnly = true)
     public PageResponse<ImportResponse> getImports(String soPhieu, String noiMua,
-                                                    String fromDate, String toDate,
-                                                    String trangThai, Pageable pageable) {
+            String fromDate, String toDate,
+            String trangThai, Pageable pageable) {
         LocalDate from = fromDate != null ? LocalDate.parse(fromDate) : null;
-        LocalDate to   = toDate   != null ? LocalDate.parse(toDate)   : null;
+        LocalDate to = toDate != null ? LocalDate.parse(toDate) : null;
 
-        Page<InventoryTransaction> page =
-                transactionRepository.findImports(soPhieu, noiMua, trangThai, from, to, pageable);
+        Page<InventoryTransaction> page = transactionRepository.findImports(soPhieu, noiMua, trangThai, from, to,
+                pageable);
 
         List<String> usernames = page.getContent().stream()
                 .map(InventoryTransaction::getCreatedBy)
@@ -169,12 +156,12 @@ public class ImportService {
                 .collect(Collectors.toMap(
                         User::getUsername,
                         User::getFullName,
-                        (existing, replacement) -> existing
-                ));
+                        (existing, replacement) -> existing));
 
         return PageResponse.<ImportResponse>builder()
                 .content(page.getContent().stream()
-                        .map(tx -> mapToImportResponse(tx, userFullNameMap.getOrDefault(tx.getCreatedBy(), tx.getCreatedBy())))
+                        .map(tx -> mapToImportResponse(tx,
+                                userFullNameMap.getOrDefault(tx.getCreatedBy(), tx.getCreatedBy())))
                         .toList())
                 .pageNumber(page.getNumber())
                 .pageSize(page.getSize())
@@ -207,7 +194,8 @@ public class ImportService {
         }
     }
 
-    private record LineItem(Product product, BigDecimal quantity, BigDecimal unitPrice, BigDecimal amount) {}
+    private record LineItem(Product product, BigDecimal quantity, BigDecimal unitPrice, BigDecimal amount) {
+    }
 
     private List<LineItem> resolveLineItems(List<ImportDetailRequest> details) {
         List<LineItem> items = new ArrayList<>();
@@ -223,7 +211,8 @@ public class ImportService {
         return items;
     }
 
-    // Xác định nhóm đại diện: nhiều dòng hơn thắng, nếu bằng nhau thì ưu tiên theo GROUP_PRIORITY (ACTT > VPP > VLK)
+    // Xác định nhóm đại diện: nhiều dòng hơn thắng, nếu bằng nhau thì ưu tiên theo
+    // GROUP_PRIORITY (ACTT > VPP > VLK)
     private String determineGroupCode(List<LineItem> lineItems) {
         Map<String, Long> countByGroup = lineItems.stream()
                 .collect(Collectors.groupingBy(li -> li.product().getNhomHangCode(), Collectors.counting()));
@@ -237,8 +226,7 @@ public class ImportService {
         return groups.stream()
                 .max(Comparator
                         .comparingLong((String g) -> countByGroup.getOrDefault(g, 0L))
-                        .thenComparingInt(g -> -(GROUP_PRIORITY.getOrDefault(g, 99)))
-                )
+                        .thenComparingInt(g -> -(GROUP_PRIORITY.getOrDefault(g, 99))))
                 .orElseThrow(() -> new InvalidImportException("Không thể xác định nhóm hàng đại diện."));
     }
 
@@ -287,7 +275,7 @@ public class ImportService {
                 .orElseGet(() -> {
                     // Lấy tồn cuối tháng trước làm tồn đầu tháng mới
                     java.time.LocalDate prevMonthDate = java.time.LocalDate.of(year, month, 1).minusMonths(1);
-                    int prevYear  = prevMonthDate.getYear();
+                    int prevYear = prevMonthDate.getYear();
                     int prevMonth = prevMonthDate.getMonthValue();
 
                     BigDecimal openingQty = BigDecimal.ZERO;
@@ -313,7 +301,6 @@ public class ImportService {
         kktsRepository.save(kkts);
     }
 
-
     private void reverseKktsImport(Product product, int year, int month, BigDecimal qty, BigDecimal amount) {
         kktsRepository.findByProductIdAndYearAndMonth(product.getId(), year, month)
                 .ifPresent(kkts -> {
@@ -323,7 +310,8 @@ public class ImportService {
     }
 
     private String resolveFullName(String username) {
-        if (username == null || username.isBlank()) return null;
+        if (username == null || username.isBlank())
+            return null;
         return userRepository.findByUsername(username)
                 .map(User::getFullName)
                 .filter(name -> !name.isBlank())
@@ -349,7 +337,8 @@ public class ImportService {
                         .build())
                 .toList();
 
-        String resolvedCreator = (creatorFullName != null && !creatorFullName.isBlank()) ? creatorFullName : tx.getCreatedBy();
+        String resolvedCreator = (creatorFullName != null && !creatorFullName.isBlank()) ? creatorFullName
+                : tx.getCreatedBy();
 
         return ImportResponse.builder()
                 .id(tx.getId())

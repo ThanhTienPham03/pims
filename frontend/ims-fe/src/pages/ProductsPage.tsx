@@ -42,7 +42,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
   const [newTenHang, setNewTenHang] = useState('');
   const [newNhomHang, setNewNhomHang] = useState('VPP');
   const [newDonViTinh, setNewDonViTinh] = useState('');
-  const [newDonGiaNhap, setNewDonGiaNhap] = useState<number>(0);
+  const [newDonGiaNhap, setNewDonGiaNhap] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [nameWarning, setNameWarning] = useState<string | null>(null);
   const [migrating, setMigrating] = useState(false);
@@ -67,7 +67,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
     const defaultGroup = newNhomHang || (groups.length > 0 ? groups[0].code : 'VPP');
     setNewNhomHang(defaultGroup);
     setNewTenHang('');
-    setNewDonGiaNhap(0);
+    setNewDonGiaNhap('');
     setNameWarning(null);
     setIsModalOpen(true);
   };
@@ -172,7 +172,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
         tenHang: newTenHang.trim(),
         nhomHang: newNhomHang,
         donViTinh: newDonViTinh,
-        donGiaNhap: Number(newDonGiaNhap) || 0,
+        donGiaNhap: newDonGiaNhap ? Number(newDonGiaNhap) : 0,
         forceSaveIfDuplicateName: forceSave || false,
       };
       const created = await productService.createProduct(req);
@@ -185,7 +185,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
         showToast(`Thêm hàng hóa mới thành công! Mã hàng tự cấp: ${created.maSo}`, 'success');
         setIsModalOpen(false);
         setNewTenHang('');
-        setNewDonGiaNhap(0);
+        setNewDonGiaNhap('');
         loadProducts();
       }
     } catch (err: any) {
@@ -200,6 +200,17 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
     try {
       await productService.deactivateProduct(id);
       showToast(`Đã ngừng sử dụng mã hàng ${maSo}`, 'success');
+      loadProducts();
+    } catch (err: any) {
+      showToast('Lỗi: ' + err.message, 'error');
+    }
+  };
+
+  const handleActivate = async (id: number, maSo: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn kích hoạt lại mã hàng [${maSo}]?`)) return;
+    try {
+      await productService.activateProduct(id);
+      showToast(`Đã kích hoạt lại mã hàng ${maSo}`, 'success');
       loadProducts();
     } catch (err: any) {
       showToast('Lỗi: ' + err.message, 'error');
@@ -354,7 +365,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
                     </td>
                     {isAdmin && (
                       <td className="text-center">
-                        {item.trangThai === 'HOAT_DONG' && (
+                        {item.trangThai === 'HOAT_DONG' ? (
                           <button
                             type="button"
                             className="btn btn-outline-danger btn-sm"
@@ -362,6 +373,15 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
                             onClick={() => handleDeactivate(item.id, item.maSo)}
                           >
                             Ngừng
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-outline-success btn-sm"
+                            title="Kích hoạt lại mã này"
+                            onClick={() => handleActivate(item.id, item.maSo)}
+                          >
+                            Kích hoạt
                           </button>
                         )}
                       </td>
@@ -457,9 +477,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ userRoles, showToast
             <input
               type="number"
               className="form-control"
-              placeholder="0"
+              placeholder="Nhập đơn giá (VND)..."
               value={newDonGiaNhap}
-              onChange={(e) => setNewDonGiaNhap(Number(e.target.value))}
+              onChange={(e) => setNewDonGiaNhap(e.target.value)}
               min="0"
             />
           </div>

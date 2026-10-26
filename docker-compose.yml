@@ -5,9 +5,7 @@
 # ==============================================================================
 
 services:
-  # ----------------------------------------------------------------------------
-  # 1. DATABASE: MariaDB 11.4 LTS
-  # ----------------------------------------------------------------------------
+ 
   database:
     image: mariadb:11.4
     container_name: pims-database
@@ -38,9 +36,6 @@ services:
     networks:
       - pims-network
 
-  # ----------------------------------------------------------------------------
-  # 2. BACKEND: Spring Boot 3.5 + Camunda 7 Embedded + JDK 21
-  # ----------------------------------------------------------------------------
   backend:
     build:
       context: ./backend/ims
@@ -57,12 +52,13 @@ services:
       DB_URL: jdbc:mariadb://database:3306/ims?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
     ports:
       - "${BACKEND_PORT:-8086}:8085"
+    volumes:
+      - ./backend/ims/logs:/app/logs
     networks:
       - pims-network
 
-  # ----------------------------------------------------------------------------
-  # 3. FRONTEND: React + TypeScript + Vite + Nginx Reverse Proxy
-  # ----------------------------------------------------------------------------
+
+  
   frontend:
     build:
       context: ./frontend/ims-fe
@@ -79,9 +75,6 @@ services:
     networks:
       - pims-network
 
-# ------------------------------------------------------------------------------
-# VOLUMES & NETWORKS
-# ------------------------------------------------------------------------------
 volumes:
   mariadb_data:
     name: pims_mariadb_data

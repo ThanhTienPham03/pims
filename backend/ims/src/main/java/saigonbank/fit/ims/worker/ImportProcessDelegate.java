@@ -11,13 +11,6 @@ import saigonbank.fit.ims.dto.response.ImportResponse;
 import saigonbank.fit.ims.repository.InventoryTransactionRepository;
 import saigonbank.fit.ims.service.ImportService;
 
-/**
- * ImportProcessDelegate — Xử lý các bước tự động trong Quy trình Nhập Ấn Phẩm
- * (BPMN).
- * 
- * Task_KiemTraVaGhiNhanNhap: Thẩm định khóa tháng, quy tắc ACQT, cấp số phiếu
- * và ghi nhận kho.
- */
 @Component("importProcessDelegate")
 public class ImportProcessDelegate implements JavaDelegate {
 

@@ -21,7 +21,6 @@ import saigonbank.fit.ims.repository.UnitRepository;
 import saigonbank.fit.ims.service.CamundaWorkflowService;
 import saigonbank.fit.ims.service.ProductService;
 
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,8 +71,7 @@ public class ProductController {
         int count = productService.migrateAllLegacyProductCodes();
         return ResponseEntity.ok(ApiResponse.success(java.util.Map.of(
                 "migratedCount", count,
-                "message", "Đã chuẩn hóa " + count + " mã sản phẩm sang định dạng mới."
-        )));
+                "message", "Đã chuẩn hóa " + count + " mã sản phẩm sang định dạng mới.")));
     }
 
     @PostMapping
@@ -83,8 +81,9 @@ public class ProductController {
             Authentication authentication) {
         String username = authentication != null ? authentication.getName() : "admin";
         ProductResponse response = productService.createProduct(request, username);
-
-        // Tự động kích hoạt Camunda workflow ghi nhận và quản lý danh mục
+        if (response.isNameWarning()) {
+            return ResponseEntity.ok(ApiResponse.success(response.getWarningMessage(), response));
+        }
         try {
             java.util.Map<String, Object> vars = new java.util.HashMap<>();
             vars.put("productId", response.getId());
@@ -92,11 +91,11 @@ public class ProductController {
             vars.put("tenHang", response.getTenHang());
             vars.put("nhomHang", response.getNhomHang());
             vars.put("donViTinh", response.getDonViTinh());
-            vars.put("donGiaNhap", response.getDonGiaNhap() != null ? response.getDonGiaNhap() : java.math.BigDecimal.ZERO);
+            vars.put("donGiaNhap",
+                    response.getDonGiaNhap() != null ? response.getDonGiaNhap() : java.math.BigDecimal.ZERO);
             vars.put("forceSave", Boolean.TRUE.equals(request.getForceSaveIfDuplicateName()));
             camundaWorkflowService.startCatalogWorkflow("TAO_MOI", vars, username);
         } catch (Exception e) {
-            // Không để lỗi workflow cản trở tạo mã hàng nghiệp vụ
         }
 
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -120,10 +119,10 @@ public class ProductController {
             vars.put("donViTinh", request.getDonViTinh());
             vars.put("trangThai", request.getTrangThai());
             vars.put("nhomHang", response.getNhomHang());
-            vars.put("donGiaNhap", request.getDonGiaNhap() != null ? request.getDonGiaNhap() : java.math.BigDecimal.ZERO);
+            vars.put("donGiaNhap",
+                    request.getDonGiaNhap() != null ? request.getDonGiaNhap() : java.math.BigDecimal.ZERO);
             camundaWorkflowService.startCatalogWorkflow("CAP_NHAT", vars, username);
         } catch (Exception e) {
-            // Logged inside workflow service
         }
 
         return ResponseEntity.ok(ApiResponse.success("Cập nhật hàng hóa thành công", response));
@@ -143,7 +142,6 @@ public class ProductController {
             vars.put("productId", id);
             camundaWorkflowService.startCatalogWorkflow("XOA_NGUNG", vars, username);
         } catch (Exception e) {
-            // Logged inside workflow service
         }
 
         return ResponseEntity.ok(ApiResponse.success("Đã xóa hàng hóa thành công", null));
@@ -155,18 +153,27 @@ public class ProductController {
             @PathVariable Long id,
             Authentication authentication) {
         String username = authentication != null ? authentication.getName() : "admin";
-        productService.deactivateProduct(id);
+        productService.deactivateProduct(id, username);
 
-        // Tự động kích hoạt Camunda workflow
         try {
             Map<String, Object> vars = new HashMap<>();
             vars.put("productId", id);
-            camundaWorkflowService.startCatalogWorkflow("XOA_NGUNG", vars, username);
+            camundaWorkflowService.startCatalogWorkflow("NGUNG_SU_DUNG", vars, username);
         } catch (Exception e) {
-            // Logged inside workflow service
         }
 
         return ResponseEntity.ok(ApiResponse.success("Đã ngừng sử dụng hàng hóa", null));
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> activateProduct(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : "admin";
+        productService.activateProduct(id, username);
+
+        return ResponseEntity.ok(ApiResponse.success("Đã kích hoạt lại hàng hóa", null));
     }
 
     @GetMapping("/groups")
@@ -181,21 +188,6 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(units));
     }
 
-    // =========================================================================
-    // CAMUNDA WORKFLOW ENDPOINTS — Quản lý Danh mục Ấn phẩm qua Camunda BPMN
-    // =========================================================================
-
-    /**
-     * Tạo mã hàng mới thông qua Camunda workflow (Process_QuanLyDanhMucAnPham).
-     * <p>
-     * Endpoint này khởi chạy quy trình BPMN, Camunda sẽ:
-     * 1. Kiểm tra trùng mã hàng
-     * 2. Kiểm tra tên gần giống (cảnh báo)
-     * 3. Lưu mã hàng + khởi tạo thẻ kho (tồn = 0) + khởi tạo dòng KKTS (tồn = 0)
-     * 4. Ghi Audit Log
-     *
-     * @return process instance ID và thông tin mã hàng
-     */
     @PostMapping("/workflow")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> createProductViaWorkflow(
@@ -210,15 +202,16 @@ public class ProductController {
             }
 
             java.util.Map<String, Object> vars = new java.util.HashMap<>();
-            vars.put("maSo",       request.getMaSo());
-            vars.put("tenHang",    request.getTenHang());
-            vars.put("nhomHang",   request.getNhomHang());
-            vars.put("donViTinh",  request.getDonViTinh());
+            vars.put("maSo", request.getMaSo());
+            vars.put("tenHang", request.getTenHang());
+            vars.put("nhomHang", request.getNhomHang());
+            vars.put("donViTinh", request.getDonViTinh());
             vars.put("donGiaNhap", request.getDonGiaNhap() != null
-                    ? request.getDonGiaNhap() : java.math.BigDecimal.ZERO);
+                    ? request.getDonGiaNhap()
+                    : java.math.BigDecimal.ZERO);
             // Nếu forceSave = true (từ frontend sau cảnh báo tên), bỏ qua User Task
-            vars.put("tenGanGiong",       false);
-            vars.put("tenTrungHoanToan",  false);
+            vars.put("tenGanGiong", false);
+            vars.put("tenTrungHoanToan", false);
 
             String processInstanceId = camundaWorkflowService
                     .startCatalogWorkflow("TAO_MOI", vars, username);
@@ -227,17 +220,13 @@ public class ProductController {
                     .body(ApiResponse.success("Quy trình tạo mã hàng đã được khởi chạy.",
                             java.util.Map.of(
                                     "processInstanceId", processInstanceId != null ? processInstanceId : "N/A",
-                                    "maSo", request.getMaSo()
-                            )));
+                                    "maSo", request.getMaSo())));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Khởi chạy quy trình thất bại: " + e.getMessage()));
         }
     }
 
-    /**
-     * Cập nhật mã hàng thông qua Camunda workflow.
-     */
     @PutMapping("/{id}/workflow")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> updateProductViaWorkflow(
@@ -247,12 +236,13 @@ public class ProductController {
         String username = authentication.getName();
         try {
             java.util.Map<String, Object> vars = new java.util.HashMap<>();
-            vars.put("productId",  id);
-            vars.put("tenHang",    request.getTenHang());
-            vars.put("donViTinh",  request.getDonViTinh());
-            vars.put("trangThai",  request.getTrangThai());
+            vars.put("productId", id);
+            vars.put("tenHang", request.getTenHang());
+            vars.put("donViTinh", request.getDonViTinh());
+            vars.put("trangThai", request.getTrangThai());
             vars.put("donGiaNhap", request.getDonGiaNhap() != null
-                    ? request.getDonGiaNhap() : java.math.BigDecimal.ZERO);
+                    ? request.getDonGiaNhap()
+                    : java.math.BigDecimal.ZERO);
             // Lấy nhomHang từ product hiện có (cần thiết cho bước kiểm tra)
             try {
                 ProductResponse existing = productService.getProductById(id);
@@ -268,21 +258,13 @@ public class ProductController {
                     .body(ApiResponse.success("Quy trình cập nhật mã hàng đã được khởi chạy.",
                             java.util.Map.of(
                                     "processInstanceId", processInstanceId != null ? processInstanceId : "N/A",
-                                    "productId", id
-                            )));
+                                    "productId", id)));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Khởi chạy quy trình thất bại: " + e.getMessage()));
         }
     }
 
-    /**
-     * Xóa hoặc chuyển trạng thái Ngưng sử dụng mã hàng thông qua Camunda workflow.
-     * <p>
-     * Camunda sẽ tự động kiểm tra phát sinh giao dịch:
-     * — Nếu đã có giao dịch: chuyển sang Ngưng sử dụng
-     * — Nếu chưa có giao dịch: xóa hoàn toàn
-     */
     @DeleteMapping("/{id}/workflow")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> deleteProductViaWorkflow(
@@ -299,8 +281,7 @@ public class ProductController {
                     .body(ApiResponse.success("Quy trình xóa/ngưng mã hàng đã được khởi chạy.",
                             java.util.Map.of(
                                     "processInstanceId", processInstanceId != null ? processInstanceId : "N/A",
-                                    "productId", id
-                            )));
+                                    "productId", id)));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Khởi chạy quy trình thất bại: " + e.getMessage()));

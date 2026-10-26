@@ -222,17 +222,12 @@ Bước 1: Chuẩn bị tệp cấu hình môi trường (.env)
 
   Cấu hình file .env trong folder database và folder backend/ims.
   
-  Theo cấu trúc .env.example có sẵn trong thư mục backend và database
+  Theo cấu trúc .env.example có sẵn trong thư mục backend 
 
   QUAN TRỌNG: Sau khi sao chép, cần chỉnh sửa các giá trị trong file .env 
   cho phù hợp môi trường triển khai. Xem mục 6 để biết chi tiết từng biến.
 
-  Lưu ý: Password trong database/.env phải KHỚP với backend/ims/.env:
-    - database/.env:     MYSQL_ROOT_PASSWORD phải = backend/ims/.env: DB_PASSWORD
-    - database/.env:     MYSQL_USER phải = backend/ims/.env: DB_USER  
-    - database/.env:     MYSQL_PASSWORD phải = backend/ims/.env: DB_USER_PASSWORD
-
-Bước 2: Build và khởi động các container
+  Bước 2: Build và khởi động các container
 
   Chạy lệnh duy nhất để tự động build và chạy cả 3 container:
       docker compose up -d --build
